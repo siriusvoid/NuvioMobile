@@ -417,6 +417,7 @@ fun PlayerScreen(
         var skipIntervals by remember { mutableStateOf<List<SkipInterval>>(emptyList()) }
         var activeSkipInterval by remember { mutableStateOf<SkipInterval?>(null) }
         var skipIntervalDismissed by remember { mutableStateOf(false) }
+        var autoSkippedIntervals by remember { mutableStateOf(setOf<SkipInterval>()) }
 
         // Parental guide overlay state
         var parentalWarnings by remember { mutableStateOf<List<ParentalWarning>>(emptyList()) }
@@ -2200,6 +2201,7 @@ fun PlayerScreen(
             skipIntervals = emptyList()
             activeSkipInterval = null
             skipIntervalDismissed = false
+            autoSkippedIntervals = emptySet()
             showNextEpisodeCard = false
             nextEpisodeAutoPlayJob?.cancel()
             nextEpisodeAutoPlaySearching = false
@@ -2235,6 +2237,31 @@ fun PlayerScreen(
                 activeSkipInterval = current
                 if (current != null) skipIntervalDismissed = false
             }
+        }
+
+        // Auto-skip the active segment once when its toggle is on.
+        LaunchedEffect(
+            activeSkipInterval,
+            initialLoadCompleted,
+            pausedOverlayVisible,
+            playerSettingsUiState.autoSkipIntroEnabled,
+            playerSettingsUiState.autoSkipRecapEnabled,
+            playerSettingsUiState.autoSkipOutroEnabled,
+        ) {
+            val current = activeSkipInterval ?: return@LaunchedEffect
+            if (!initialLoadCompleted || pausedOverlayVisible) return@LaunchedEffect
+            if (current in autoSkippedIntervals) return@LaunchedEffect
+            val enabled = when (current.type.lowercase()) {
+                "intro", "op", "mixed-op" -> playerSettingsUiState.autoSkipIntroEnabled
+                "recap" -> playerSettingsUiState.autoSkipRecapEnabled
+                "outro", "ed", "mixed-ed", "credits" -> playerSettingsUiState.autoSkipOutroEnabled
+                else -> false
+            }
+            if (!enabled) return@LaunchedEffect
+            autoSkippedIntervals = autoSkippedIntervals + current
+            playerController?.seekTo((current.endTime * 1000).toLong())
+            scheduleProgressSyncAfterSeek()
+            skipIntervalDismissed = true
         }
 
         // Resolve next episode info when episodes list or current episode changes
