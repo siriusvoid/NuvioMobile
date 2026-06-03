@@ -2,6 +2,7 @@ package com.nuvio.app.features.player
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,6 +51,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -73,6 +77,8 @@ import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvioTypeScale
+import com.nuvio.app.core.ui.ThemeColors
+import com.nuvio.app.features.player.skip.SkipInterval
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -88,6 +94,7 @@ internal fun PlayerControlsShell(
     displayedPositionMs: Long,
     metrics: PlayerLayoutMetrics,
     resizeMode: PlayerResizeMode,
+    skipSegments: List<SkipInterval> = emptyList(),
     isLocked: Boolean,
     useLegacyLayout: Boolean = false,
     showRemainingTime: Boolean = false,
@@ -244,6 +251,7 @@ internal fun PlayerControlsShell(
                     displayedPositionMs = displayedPositionMs,
                     metrics = metrics,
                     resizeMode = resizeMode,
+                    segments = skipSegments,
                     onScrubChange = onScrubChange,
                     onScrubFinished = onScrubFinished,
                     onResizeModeClick = onResizeModeClick,
@@ -602,6 +610,7 @@ private fun ProgressControls(
     displayedPositionMs: Long,
     metrics: PlayerLayoutMetrics,
     resizeMode: PlayerResizeMode,
+    segments: List<SkipInterval> = emptyList(),
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
     onResizeModeClick: () -> Unit,
@@ -623,6 +632,7 @@ private fun ProgressControls(
             durationMs = playbackSnapshot.durationMs,
             displayedPositionMs = displayedPositionMs,
             metrics = metrics,
+            segments = segments,
             onScrubChange = onScrubChange,
             onScrubFinished = onScrubFinished,
         )
@@ -684,17 +694,61 @@ private fun ProgressControls(
     }
 }
 
+/** The default slider track with intro/recap/outro segments drawn on top as rounded blocks, lined up with the track. */
+@Composable
+private fun SkipSegmentsTrack(
+    sliderState: SliderState,
+    segments: List<SkipInterval>,
+    durationMs: Long,
+    markerColor: Color,
+) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        PlayerProgressTrack(sliderState)
+        if (durationMs > 0L && segments.isNotEmpty()) {
+            Canvas(modifier = Modifier.matchParentSize()) {
+                val cornerPx = 3.dp.toPx()
+                segments.forEach { segment ->
+                    val startFrac = ((segment.startTime * 1000.0) / durationMs)
+                        .coerceIn(0.0, 1.0).toFloat()
+                    val endFrac = ((segment.endTime * 1000.0) / durationMs)
+                        .coerceIn(0.0, 1.0).toFloat()
+                    val widthPx = (endFrac - startFrac) * size.width
+                    if (widthPx <= 0.5f) return@forEach
+                    drawRoundRect(
+                        color = markerColor,
+                        topLeft = Offset(startFrac * size.width, 0f),
+                        size = Size(widthPx, size.height),
+                        cornerRadius = CornerRadius(cornerPx, cornerPx),
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable
 internal fun PlayerSeekBar(
     durationMs: Long,
     displayedPositionMs: Long,
     metrics: PlayerLayoutMetrics,
+    segments: List<SkipInterval> = emptyList(),
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val seekDurationMs = durationMs.coerceAtLeast(1L)
     val seekDescription = stringResource(Res.string.player_seek_position)
+
+    // White stays visible over the accent-colored played fill; light purple only on the White theme (white would vanish on its near-white fill).
+    val accentColor = MaterialTheme.colorScheme.primary
+    val segmentMarkerColor = remember(accentColor) {
+        if (accentColor == ThemeColors.White.secondary) {
+            Color(0xFFCE93D8).copy(alpha = 0.6f)
+        } else {
+            Color.White.copy(alpha = 0.6f)
+        }
+    }
+
     Column(modifier = modifier) {
         Slider(
             modifier = Modifier
@@ -707,7 +761,14 @@ internal fun PlayerSeekBar(
             onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
             enabled = durationMs > 0L,
             valueRange = 0f..seekDurationMs.toFloat(),
-            track = { sliderState -> PlayerProgressTrack(sliderState) },
+            track = { sliderState ->
+                SkipSegmentsTrack(
+                    sliderState = sliderState,
+                    segments = segments,
+                    durationMs = durationMs,
+                    markerColor = segmentMarkerColor,
+                )
+            },
         )
         Row(
             modifier = Modifier
