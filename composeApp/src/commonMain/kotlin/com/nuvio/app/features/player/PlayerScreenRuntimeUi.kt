@@ -203,6 +203,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             displayedPositionMs = displayedPositionMs,
             metrics = metrics,
             resizeMode = resizeMode,
+            skipSegments = skipIntervals,
             isLocked = playerControlsLocked,
             showPlaybackControls = controlsVisible,
             onLockToggle = {
