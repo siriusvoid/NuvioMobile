@@ -2552,6 +2552,7 @@ fun PlayerScreen(
                     displayedPositionMs = displayedPositionMs,
                     metrics = metrics,
                     resizeMode = resizeMode,
+                    skipSegments = skipIntervals,
                     isLocked = playerControlsLocked,
                     showPlaybackControls = controlsVisible,
                     onLockToggle = {

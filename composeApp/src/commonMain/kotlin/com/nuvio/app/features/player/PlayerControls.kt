@@ -2,6 +2,7 @@ package com.nuvio.app.features.player
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,6 +40,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SliderState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,9 +48,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
@@ -59,6 +65,7 @@ import com.nuvio.app.core.ui.AppIconResource
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.nuvioTypeScale
+import com.nuvio.app.features.player.skip.SkipInterval
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -74,6 +81,7 @@ internal fun PlayerControlsShell(
     displayedPositionMs: Long,
     metrics: PlayerLayoutMetrics,
     resizeMode: PlayerResizeMode,
+    skipSegments: List<SkipInterval> = emptyList(),
     isLocked: Boolean,
     showPlaybackControls: Boolean = true,
     onLockToggle: () -> Unit,
@@ -181,6 +189,7 @@ internal fun PlayerControlsShell(
                     displayedPositionMs = displayedPositionMs,
                     metrics = metrics,
                     resizeMode = resizeMode,
+                    segments = skipSegments,
                     onScrubChange = onScrubChange,
                     onScrubFinished = onScrubFinished,
                     onResizeModeClick = onResizeModeClick,
@@ -479,6 +488,7 @@ private fun ProgressControls(
     displayedPositionMs: Long,
     metrics: PlayerLayoutMetrics,
     resizeMode: PlayerResizeMode,
+    segments: List<SkipInterval> = emptyList(),
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
     onResizeModeClick: () -> Unit,
@@ -495,6 +505,13 @@ private fun ProgressControls(
     val subtitlesPainter = appIconPainter(AppIconResource.PlayerSubtitles)
     val audioPainter = appIconPainter(AppIconResource.PlayerAudioFilled)
 
+    // White stays visible over the accent-colored played fill; violet when the accent itself is white.
+    val segmentMarkerColor = if (MaterialTheme.colorScheme.primary.luminance() > 0.7f) {
+        Color(0xFF8B5CF6).copy(alpha = 0.6f)
+    } else {
+        Color.White.copy(alpha = 0.6f)
+    }
+
     Column(modifier = modifier) {
         Slider(
             modifier = Modifier
@@ -505,6 +522,14 @@ private fun ProgressControls(
             onValueChange = { value -> onScrubChange(value.toLong()) },
             onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, durationMs)) },
             valueRange = 0f..durationMs.toFloat(),
+            track = { sliderState ->
+                SkipSegmentsTrack(
+                    sliderState = sliderState,
+                    segments = segments,
+                    durationMs = durationMs,
+                    markerColor = segmentMarkerColor,
+                )
+            },
         )
         Row(
             modifier = Modifier
@@ -576,6 +601,41 @@ private fun ProgressControls(
                             onClick = onOpenInExternalPlayer,
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+/** The default slider track with intro/recap/outro segments drawn on top as rounded blocks, lined up with the track. */
+@Composable
+private fun SkipSegmentsTrack(
+    sliderState: SliderState,
+    segments: List<SkipInterval>,
+    durationMs: Long,
+    markerColor: Color,
+) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        SliderDefaults.Track(
+            sliderState = sliderState,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (durationMs > 0L && segments.isNotEmpty()) {
+            Canvas(modifier = Modifier.matchParentSize()) {
+                val cornerPx = 3.dp.toPx()
+                segments.forEach { segment ->
+                    val startFrac = ((segment.startTime * 1000.0) / durationMs)
+                        .coerceIn(0.0, 1.0).toFloat()
+                    val endFrac = ((segment.endTime * 1000.0) / durationMs)
+                        .coerceIn(0.0, 1.0).toFloat()
+                    val widthPx = (endFrac - startFrac) * size.width
+                    if (widthPx <= 0.5f) return@forEach
+                    drawRoundRect(
+                        color = markerColor,
+                        topLeft = Offset(startFrac * size.width, 0f),
+                        size = Size(widthPx, size.height),
+                        cornerRadius = CornerRadius(cornerPx, cornerPx),
+                    )
                 }
             }
         }
