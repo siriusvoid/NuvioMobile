@@ -3,7 +3,7 @@ name: Build Debug APK
 on:
   push:
     branches:
-      - test/debug-apk
+      - test
   workflow_dispatch:
 
 permissions:
@@ -30,6 +30,11 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Use stable debug signing key
+        run: |
+          mkdir -p "$HOME/.android"
+          cp .github/debug.keystore "$HOME/.android/debug.keystore"
 
       - name: Generate runtime configuration
         run: |
