@@ -1222,7 +1222,7 @@ private fun ConfiguredMetaSections(
                 )
             }
             MetaScreenSectionKey.OVERVIEW -> {
-                DetailMetaInfo(meta = meta)
+                DetailMetaInfo(meta = meta, showImdbRatings = settings.showImdbRatings)
             }
             MetaScreenSectionKey.PRODUCTION -> {
                 if (hasProductionSection) {
@@ -1270,6 +1270,7 @@ private fun ConfiguredMetaSections(
                         watchedKeys = watchedKeys,
                         episodeRatings = episodeImdbRatings,
                         blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                        showImdbRatings = settings.showImdbRatings,
                         onEpisodeClick = onEpisodeClick,
                         onEpisodeLongPress = onEpisodeLongPress,
                         onSeasonLongPress = onSeasonLongPress,
