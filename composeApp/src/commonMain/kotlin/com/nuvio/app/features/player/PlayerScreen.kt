@@ -2247,13 +2247,7 @@ fun PlayerScreen(
                 positionSec >= interval.startTime && positionSec < interval.endTime - 0.5
             } ?: return@LaunchedEffect
             if (current in autoSkippedIntervals) return@LaunchedEffect
-            val enabled = when (current.type.lowercase()) {
-                "intro", "op", "mixed-op" -> playerSettingsUiState.autoSkipIntroEnabled
-                "recap" -> playerSettingsUiState.autoSkipRecapEnabled
-                "outro", "ed", "mixed-ed", "credits" -> playerSettingsUiState.autoSkipOutroEnabled
-                else -> false
-            }
-            if (!enabled) return@LaunchedEffect
+            if (!playerSettingsUiState.autoSkips(current)) return@LaunchedEffect
             autoSkippedIntervals = autoSkippedIntervals + current
             playerController?.seekTo((current.endTime * 1000).toLong())
             scheduleProgressSyncAfterSeek()
@@ -2721,7 +2715,9 @@ fun PlayerScreen(
             // Skip intro/recap/outro button
             if (!playerControlsLocked) {
                 SkipIntroButton(
-                    interval = if (!initialLoadCompleted || pausedOverlayVisible) null else activeSkipInterval,
+                    interval = if (!initialLoadCompleted || pausedOverlayVisible) null else activeSkipInterval?.takeUnless {
+                        playerSettingsUiState.autoSkips(it) && (it !in autoSkippedIntervals || skipIntervalDismissed)
+                    },
                     dismissed = skipIntervalDismissed,
                     controlsVisible = controlsVisible,
                     onSkip = {
@@ -3150,3 +3146,12 @@ private fun findPersistedSubtitleTrackIndex(
     }
     return -1
 }
+
+/** Whether auto-skip is enabled for this segment's type. */
+internal fun PlayerSettingsUiState.autoSkips(interval: SkipInterval): Boolean =
+    when (interval.type.lowercase()) {
+        "intro", "op", "mixed-op" -> autoSkipIntroEnabled
+        "recap" -> autoSkipRecapEnabled
+        "outro", "ed", "mixed-ed", "credits" -> autoSkipOutroEnabled
+        else -> false
+    }
