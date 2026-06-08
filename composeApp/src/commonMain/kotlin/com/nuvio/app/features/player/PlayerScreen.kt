@@ -2239,17 +2239,13 @@ fun PlayerScreen(
             }
         }
 
-        // Auto-skip the active segment once when its toggle is on.
-        LaunchedEffect(
-            activeSkipInterval,
-            initialLoadCompleted,
-            pausedOverlayVisible,
-            playerSettingsUiState.autoSkipIntroEnabled,
-            playerSettingsUiState.autoSkipRecapEnabled,
-            playerSettingsUiState.autoSkipOutroEnabled,
-        ) {
-            val current = activeSkipInterval ?: return@LaunchedEffect
-            if (!initialLoadCompleted || pausedOverlayVisible) return@LaunchedEffect
+        // Automatically skip the segment currently playing, once per segment.
+        LaunchedEffect(playbackSnapshot.positionMs, skipIntervals) {
+            if (!initialLoadCompleted || !initialSeekApplied || pausedOverlayVisible) return@LaunchedEffect
+            val positionSec = playbackSnapshot.positionMs / 1000.0
+            val current = skipIntervals.firstOrNull { interval ->
+                positionSec >= interval.startTime && positionSec < interval.endTime - 0.5
+            } ?: return@LaunchedEffect
             if (current in autoSkippedIntervals) return@LaunchedEffect
             val enabled = when (current.type.lowercase()) {
                 "intro", "op", "mixed-op" -> playerSettingsUiState.autoSkipIntroEnabled
