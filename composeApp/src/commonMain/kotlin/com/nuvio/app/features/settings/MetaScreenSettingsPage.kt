@@ -94,6 +94,8 @@ import nuvio.composeapp.generated.resources.settings_meta_production
 import nuvio.composeapp.generated.resources.settings_meta_production_description
 import nuvio.composeapp.generated.resources.settings_meta_section_appearance
 import nuvio.composeapp.generated.resources.settings_meta_section_sections
+import nuvio.composeapp.generated.resources.settings_meta_show_imdb_ratings
+import nuvio.composeapp.generated.resources.settings_meta_show_imdb_ratings_description
 import nuvio.composeapp.generated.resources.settings_meta_tab_group_format
 import nuvio.composeapp.generated.resources.settings_meta_tab_layout
 import nuvio.composeapp.generated.resources.settings_meta_tab_layout_description
@@ -155,6 +157,14 @@ internal fun LazyListScope.metaScreenSettingsContent(
                     checked = uiState.blurUnwatchedEpisodes,
                     isTablet = isTablet,
                     onCheckedChange = { MetaScreenSettingsRepository.setBlurUnwatchedEpisodes(it) },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_meta_show_imdb_ratings),
+                    description = stringResource(Res.string.settings_meta_show_imdb_ratings_description),
+                    checked = uiState.showImdbRatings,
+                    isTablet = isTablet,
+                    onCheckedChange = { MetaScreenSettingsRepository.setShowImdbRatings(it) },
                 )
             }
         }
