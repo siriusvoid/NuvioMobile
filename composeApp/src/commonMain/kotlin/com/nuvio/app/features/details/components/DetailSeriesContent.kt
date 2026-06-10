@@ -105,6 +105,7 @@ fun DetailSeriesContent(
     watchedKeys: Set<String> = emptySet(),
     episodeRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
     blurUnwatchedEpisodes: Boolean = false,
+    showImdbRatings: Boolean = true,
     onEpisodeClick: ((MetaVideo) -> Unit)? = null,
     onEpisodeLongPress: ((MetaVideo) -> Unit)? = null,
     onSeasonLongPress: ((Int) -> Unit)? = null,
@@ -223,6 +224,7 @@ fun DetailSeriesContent(
                             progressByVideoId = progressByVideoId,
                             episodeRatings = episodeRatings,
                             blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                            showImdbRatings = showImdbRatings,
                             preferredEpisodeNumber = preferredEpisodeNumberForSeason(
                                 displayedSeasonNumber = seasonForContent,
                                 preferredSeasonNumber = preferredSeasonNumber,
@@ -246,7 +248,11 @@ fun DetailSeriesContent(
                                     video = episode,
                                     fallbackImage = meta.background ?: meta.poster,
                                     progressEntry = progressByVideoId[episodeVideoId],
-                                    imdbRating = episode.seasonEpisodeKey()?.let { episodeRatings[it] } ?: episode.rating,
+                                    imdbRating = if (showImdbRatings) {
+                                        episode.seasonEpisodeKey()?.let { episodeRatings[it] } ?: episode.rating
+                                    } else {
+                                        null
+                                    },
                                     isWatched = progressByVideoId[episodeVideoId]?.isEffectivelyCompleted == true ||
                                         WatchingState.isEpisodeWatched(
                                             watchedKeys = watchedKeys,
@@ -708,6 +714,7 @@ private fun EpisodeHorizontalRow(
     progressByVideoId: Map<String, WatchProgressEntry>,
     episodeRatings: Map<Pair<Int, Int>, Double>,
     blurUnwatchedEpisodes: Boolean,
+    showImdbRatings: Boolean,
     preferredEpisodeNumber: Int? = null,
     onEpisodeClick: ((MetaVideo) -> Unit)?,
     onEpisodeLongPress: ((MetaVideo) -> Unit)?,
@@ -757,7 +764,11 @@ private fun EpisodeHorizontalRow(
                 video = episode,
                 fallbackImage = fallbackImage,
                 progressEntry = progressByVideoId[episodeVideoId],
-                imdbRating = episode.seasonEpisodeKey()?.let { episodeRatings[it] } ?: episode.rating,
+                imdbRating = if (showImdbRatings) {
+                    episode.seasonEpisodeKey()?.let { episodeRatings[it] } ?: episode.rating
+                } else {
+                    null
+                },
                 isWatched = progressByVideoId[episodeVideoId]?.isEffectivelyCompleted == true ||
                     WatchingState.isEpisodeWatched(
                         watchedKeys = watchedKeys,

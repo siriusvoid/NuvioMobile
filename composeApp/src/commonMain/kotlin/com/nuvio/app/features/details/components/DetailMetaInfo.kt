@@ -70,6 +70,7 @@ fun DetailMetaInfo(
     meta: MetaDetails,
     modifier: Modifier = Modifier,
     horizontalScrollPadding: Dp = 0.dp,
+    showImdbRatings: Boolean = true,
 ) {
     Column(
         modifier = modifier
@@ -86,7 +87,7 @@ fun DetailMetaInfo(
         val hasMetaRow = releaseLine != null ||
             runtimeText != null ||
             ageBadge != null ||
-            (validImdbRating != null && !hasMdbImdbRating)
+            (showImdbRatings && validImdbRating != null && !hasMdbImdbRating)
         if (hasMetaRow) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -111,7 +112,7 @@ fun DetailMetaInfo(
                 ageBadge?.let { badge ->
                     DetailHeroMetaBadge(text = badge)
                 }
-                if (validImdbRating != null && !hasMdbImdbRating) {
+                if (showImdbRatings && validImdbRating != null && !hasMdbImdbRating) {
                     val imdbTextStyle = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.sp,

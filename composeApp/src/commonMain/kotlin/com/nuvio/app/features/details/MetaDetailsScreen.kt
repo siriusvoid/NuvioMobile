@@ -2152,6 +2152,7 @@ private fun ConfiguredMetaSections(
                 DetailMetaInfo(
                     meta = meta,
                     horizontalScrollPadding = horizontalScrollPadding,
+                    showImdbRatings = settings.showImdbRatings,
                 )
             }
             MetaScreenSectionKey.PRODUCTION -> {
@@ -2208,6 +2209,7 @@ private fun ConfiguredMetaSections(
                         watchedKeys = watchedKeys,
                         episodeRatings = episodeImdbRatings,
                         blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                        showImdbRatings = settings.showImdbRatings,
                         onEpisodeClick = onEpisodeClick,
                         onEpisodeLongPress = onEpisodeLongPress,
                         onSeasonLongPress = onSeasonLongPress,

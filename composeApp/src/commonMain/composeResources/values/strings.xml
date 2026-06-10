@@ -938,6 +938,8 @@
     <string name="settings_meta_production_description">Studios and networks.</string>
     <string name="settings_meta_section_appearance">APPEARANCE</string>
     <string name="settings_meta_section_sections">SECTIONS</string>
+    <string name="settings_meta_show_imdb_ratings">Show IMDb Ratings</string>
+    <string name="settings_meta_show_imdb_ratings_description">Display default IMDb ratings on movie/series detail pages and episode cards.</string>
     <string name="settings_meta_tab_group_format">Tab Group %1$d</string>
     <string name="settings_meta_tab_layout">Tab Layout</string>
     <string name="settings_meta_tab_layout_description">Group sections into tabs like the TV app. Assign up to 3 sections per tab group.</string>
