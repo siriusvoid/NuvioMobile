@@ -1,8 +1,9 @@
 #include? "Version.xcconfig"
 
-// Apple Developer Team ID used for code signing (Xcode → Settings… → Accounts → your team).
-// Debug builds append it to the bundle id below so every team gets its own
-// registrable app id; com.nuvio.app belongs to the upstream developer's team.
+// Apple Developer Team ID used for code signing. Find it in your Apple Development
+// certificate's Organisational Unit (Keychain Access) or developer.apple.com → Membership.
+// It is appended to the bundle id below so every team gets its own registrable
+// app id; com.nuvio.app / com.nuvio.media belong to the upstream developer's team.
 TEAM_ID=
 
 PRODUCT_NAME=Nuvio

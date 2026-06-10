@@ -136,7 +136,13 @@ object NetworkStatusRepository {
             return NetworkCondition.NoInternet
         }
 
-        val supabaseReachable = SupabaseEndpointConfig.restEndpointUrls().any { url ->
+        // Self-built binaries without Supabase credentials have no backend to probe.
+        val restEndpointUrls = SupabaseEndpointConfig.restEndpointUrls()
+        if (restEndpointUrls.isEmpty()) {
+            return NetworkCondition.Online
+        }
+
+        val supabaseReachable = restEndpointUrls.any { url ->
             probeReachable(
                 url = url,
                 headers = mapOf("apikey" to ServerConfigurationRepository.active.value.publishableKey),
