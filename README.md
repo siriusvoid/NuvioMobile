@@ -62,7 +62,7 @@ Useful commands:
 
 Versioning is driven from `iosApp/Configuration/Version.xcconfig`, which is used as the shared source of truth for both iOS and Android builds.
 
-To run on a physical iOS device, set your Apple Developer Team ID in `iosApp/Configuration/Config.xcconfig` (`TEAM_ID=XXXXXXXXXX`, listed under Xcode → Settings… → Accounts). Debug builds derive their bundle identifier from it, so Xcode can register an app id under your own team.
+To run on a physical iOS device, set your Apple Developer Team ID in `iosApp/Configuration/Config.xcconfig` (`TEAM_ID=XXXXXXXXXX`, found in your Apple Development certificate's Organisational Unit via Keychain Access, or on developer.apple.com → Membership). Builds derive their bundle identifier from it, so Xcode can register an app id under your own team.
 
 ## Legal & DMCA
 
