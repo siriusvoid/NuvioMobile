@@ -45,6 +45,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,7 +55,6 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
@@ -65,6 +65,7 @@ import com.nuvio.app.core.ui.AppIconResource
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.nuvioTypeScale
+import com.nuvio.app.core.ui.ThemeColors
 import com.nuvio.app.features.player.skip.SkipInterval
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -505,11 +506,14 @@ private fun ProgressControls(
     val subtitlesPainter = appIconPainter(AppIconResource.PlayerSubtitles)
     val audioPainter = appIconPainter(AppIconResource.PlayerAudioFilled)
 
-    // White stays visible over the accent-colored played fill; violet when the accent itself is white.
-    val segmentMarkerColor = if (MaterialTheme.colorScheme.primary.luminance() > 0.7f) {
-        Color(0xFF8B5CF6).copy(alpha = 0.6f)
-    } else {
-        Color.White.copy(alpha = 0.6f)
+    // White stays visible over the accent-colored played fill; light purple only on the White theme (white would vanish on its near-white fill).
+    val accentColor = MaterialTheme.colorScheme.primary
+    val segmentMarkerColor = remember(accentColor) {
+        if (accentColor == ThemeColors.White.secondary) {
+            Color(0xFFCE93D8).copy(alpha = 0.6f)
+        } else {
+            Color.White.copy(alpha = 0.6f)
+        }
     }
 
     Column(modifier = modifier) {
