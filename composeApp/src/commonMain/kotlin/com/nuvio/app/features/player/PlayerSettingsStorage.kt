@@ -19,6 +19,8 @@ internal expect object PlayerSettingsStorage {
     fun saveExternalPlayerEnabled(enabled: Boolean)
     fun loadExternalPlayerForwardSubtitles(): Boolean?
     fun saveExternalPlayerForwardSubtitles(enabled: Boolean)
+    fun loadExternalPlayerSendSkipSegments(): Boolean?
+    fun saveExternalPlayerSendSkipSegments(enabled: Boolean)
     fun loadExternalPlayerId(): String?
     fun saveExternalPlayerId(playerId: String?)
     fun loadPreferredAudioLanguage(): String?
@@ -55,6 +57,14 @@ internal expect object PlayerSettingsStorage {
     fun saveStreamReuseLastLinkEnabled(enabled: Boolean)
     fun loadStreamReuseLastLinkCacheHours(): Int?
     fun saveStreamReuseLastLinkCacheHours(hours: Int)
+    fun loadAndroidPlaybackEngine(): String?
+    fun saveAndroidPlaybackEngine(engine: String)
+    fun loadAndroidLibmpvVideoOutput(): String?
+    fun saveAndroidLibmpvVideoOutput(output: String)
+    fun loadAndroidLibmpvHardwareDecodingEnabled(): Boolean?
+    fun saveAndroidLibmpvHardwareDecodingEnabled(enabled: Boolean)
+    fun loadAndroidLibmpvYuv420pEnabled(): Boolean?
+    fun saveAndroidLibmpvYuv420pEnabled(enabled: Boolean)
     fun loadDecoderPriority(): Int?
     fun saveDecoderPriority(priority: Int)
     fun loadMapDV7ToHevc(): Boolean?
