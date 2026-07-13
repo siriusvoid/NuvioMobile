@@ -136,17 +136,18 @@ object NetworkStatusRepository {
             return NetworkCondition.NoInternet
         }
 
-        val backendConfig = SyncBackendRepository.selectedBackend
         // Self-built binaries without Supabase credentials have no backend to probe.
-        val supabaseUrl = backendConfig.normalizedSupabaseUrl
-        if (supabaseUrl.isBlank()) {
+        val restEndpointUrls = SupabaseEndpointConfig.restEndpointUrls()
+        if (restEndpointUrls.isEmpty()) {
             return NetworkCondition.Online
         }
 
-        val supabaseReachable = probeReachable(
-            url = "$supabaseUrl/rest/v1/",
-            headers = mapOf("apikey" to backendConfig.anonKey),
-        )
+        val supabaseReachable = restEndpointUrls.any { url ->
+            probeReachable(
+                url = url,
+                headers = mapOf("apikey" to SupabaseConfig.ANON_KEY),
+            )
+        }
         if (!supabaseReachable) {
             return NetworkCondition.ServersUnreachable
         }
