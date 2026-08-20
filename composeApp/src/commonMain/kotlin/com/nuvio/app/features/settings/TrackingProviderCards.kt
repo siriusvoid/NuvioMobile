@@ -72,6 +72,8 @@ import com.nuvio.app.features.simkl.SimklAuthRepository
 import com.nuvio.app.features.simkl.SimklAuthUiState
 import com.nuvio.app.features.simkl.SimklBrandAsset
 import com.nuvio.app.features.simkl.SimklConnectionMode
+import com.nuvio.app.features.simkl.SimklAuthenticationMethod
+import com.nuvio.app.features.simkl.SIMKL_PIN_VERIFICATION_URL
 import com.nuvio.app.features.simkl.SimklSyncRepository
 import com.nuvio.app.features.simkl.simklBrandPainter
 import com.nuvio.app.features.tracking.TrackingProviderId
@@ -80,12 +82,14 @@ import com.nuvio.app.features.trakt.TraktAuthRepository
 import com.nuvio.app.features.trakt.TraktAuthUiState
 import com.nuvio.app.features.trakt.TraktBrandAsset
 import com.nuvio.app.features.trakt.TraktConnectionMode
+import com.nuvio.app.features.trakt.TraktAuthenticationMethod
 import com.nuvio.app.features.trakt.traktBrandPainter
 import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.settings_mdblist_disconnect_description
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
+import nuvio.composeapp.generated.resources.settings_tracking_connect_with_code
 import nuvio.composeapp.generated.resources.action_collapse
 import nuvio.composeapp.generated.resources.action_expand
 import nuvio.composeapp.generated.resources.settings_simkl_authorization_expired
@@ -174,7 +178,19 @@ internal fun TrackingProviderCards(
         SimklSyncRepository.state
     }.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+    val uriHandler = LocalUriHandler.current
     var showSyncInfo by rememberSaveable { mutableStateOf(false) }
+    var deviceCodeBrand by remember { mutableStateOf<TrackingBrand?>(null) }
+    val onTraktConnectWithCode: () -> Unit = {
+        TraktAuthRepository.setAuthenticationMethod(TraktAuthenticationMethod.DEVICE_CODE)
+        TraktAuthRepository.onConnectRequested()
+        deviceCodeBrand = TrackingBrand.TRAKT
+    }
+    val onSimklConnectWithCode: () -> Unit = {
+        SimklAuthRepository.setAuthenticationMethod(SimklAuthenticationMethod.DEVICE_CODE)
+        SimklAuthRepository.onConnectRequested()
+        deviceCodeBrand = TrackingBrand.SIMKL
+    }
     val onSimklSyncRequested: () -> Unit = {
         scope.launch {
             WatchProgressSourceCoordinator.refreshProviderAndActiveSource(
@@ -193,6 +209,7 @@ internal fun TrackingProviderCards(
     ) {
         TraktProviderCard(
             uiState = traktUiState,
+            onConnectWithCodeRequested = onTraktConnectWithCode,
             modifier = Modifier.fillMaxWidth(),
         )
         SimklProviderCard(
@@ -201,9 +218,36 @@ internal fun TrackingProviderCards(
             syncErrorMessage = syncState.errorMessage,
             onSyncRequested = onSimklSyncRequested,
             onInfoRequested = { showSyncInfo = true },
+            onConnectWithCodeRequested = onSimklConnectWithCode,
             modifier = Modifier.fillMaxWidth(),
         )
         MdbListProviderCard(Modifier.fillMaxWidth())
+    }
+
+    deviceCodeBrand?.let { brand ->
+        val isTrakt = brand == TrackingBrand.TRAKT
+        TrackingDeviceCodeSheet(
+            userCode = if (isTrakt) {
+                TraktAuthRepository.pendingDeviceUserCode()
+            } else {
+                SimklAuthRepository.pendingDeviceUserCode()
+            },
+            verificationUrl = if (isTrakt) TraktAuthRepository.ACTIVATE_URL else SIMKL_PIN_VERIFICATION_URL,
+            isConnected = if (isTrakt) {
+                traktUiState.mode == TraktConnectionMode.CONNECTED
+            } else {
+                simklUiState.mode == SimklConnectionMode.CONNECTED
+            },
+            onOpenVerificationPage = { url -> uriHandler.openUri(url) },
+            onCancel = {
+                if (isTrakt) {
+                    TraktAuthRepository.onCancelAuthorization()
+                } else {
+                    SimklAuthRepository.onCancelAuthorization()
+                }
+            },
+            onDismiss = { deviceCodeBrand = null },
+        )
     }
 
     if (showSyncInfo) {
@@ -214,6 +258,7 @@ internal fun TrackingProviderCards(
 @Composable
 private fun TraktProviderCard(
     uiState: TraktAuthUiState,
+    onConnectWithCodeRequested: () -> Unit,
     modifier: Modifier,
 ) {
     TrackingProviderCard(
@@ -237,7 +282,11 @@ private fun TraktProviderCard(
             uiState.mode == TraktConnectionMode.CONNECTED
         },
         errorMessage = uiState.errorMessage,
-        onConnectRequested = TraktAuthRepository::onConnectRequested,
+        onConnectRequested = {
+            TraktAuthRepository.setAuthenticationMethod(TraktAuthenticationMethod.BROWSER_REDIRECT)
+            TraktAuthRepository.onConnectRequested()
+        },
+        onConnectWithCodeRequested = onConnectWithCodeRequested,
         onResumeAuthorization = {
             TraktAuthRepository.pendingAuthorizationUrl()
                 ?: TraktAuthRepository.onConnectRequested()
@@ -255,6 +304,7 @@ private fun SimklProviderCard(
     syncErrorMessage: String?,
     onSyncRequested: () -> Unit,
     onInfoRequested: () -> Unit,
+    onConnectWithCodeRequested: () -> Unit,
     modifier: Modifier,
 ) {
     TrackingProviderCard(
@@ -280,7 +330,11 @@ private fun SimklProviderCard(
         errorMessage = simklErrorMessage(uiState.error) ?: syncErrorMessage,
         websiteLabel = stringResource(Res.string.settings_simkl_visit),
         websiteUrl = SIMKL_WEBSITE_URL,
-        onConnectRequested = SimklAuthRepository::onConnectRequested,
+        onConnectRequested = {
+            SimklAuthRepository.setAuthenticationMethod(SimklAuthenticationMethod.BROWSER_REDIRECT)
+            SimklAuthRepository.onConnectRequested()
+        },
+        onConnectWithCodeRequested = onConnectWithCodeRequested,
         onResumeAuthorization = {
             SimklAuthRepository.pendingAuthorizationUrl()
                 ?: SimklAuthRepository.onConnectRequested()
@@ -318,6 +372,7 @@ internal fun TrackingProviderCard(
     websiteLabel: String? = null,
     websiteUrl: String? = null,
     onConnectRequested: suspend () -> String?,
+    onConnectWithCodeRequested: (() -> Unit)? = null,
     onResumeAuthorization: suspend () -> String?,
     onCancelAuthorization: () -> Unit,
     onSyncRequested: (() -> Unit)? = null,
@@ -498,6 +553,20 @@ internal fun TrackingProviderCard(
                                 enabled = credentialsConfigured && !isLoading,
                                 onClick = { actionScope.launch { openUrl(onConnectRequested()) } },
                             )
+                            onConnectWithCodeRequested?.let { connectWithCode ->
+                                OutlinedButton(
+                                    onClick = connectWithCode,
+                                    enabled = credentialsConfigured && !isLoading,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = Color.White,
+                                    ),
+                                ) {
+                                    Text(
+                                        text = stringResource(Res.string.settings_tracking_connect_with_code),
+                                    )
+                                }
+                            }
                             if (!credentialsConfigured) {
                                 TrackingBrandMessage(
                                     text = missingCredentialsMessage,
