@@ -66,4 +66,30 @@ class MetaDetailsReleaseLineTest {
             formatMetaReleaseLineForDetails(meta("series", "2020-04-01", status = "Ended", lastAirDate = null)),
         )
     }
+
+    @Test
+    fun unknownStatusShowsSingleYearInsteadOfOpenRange() {
+        assertEquals("2003", formatMetaReleaseLineForDetails(meta("series", "2003")))
+    }
+
+    @Test
+    fun unknownStatusIgnoresLastAirDate() {
+        assertEquals(
+            "2003",
+            formatMetaReleaseLineForDetails(meta("series", "2003", lastAirDate = "2007-05-01")),
+        )
+    }
+
+    @Test
+    fun continuingStatusShowsOpenRange() {
+        assertEquals(
+            "2003 -",
+            formatMetaReleaseLineForDetails(meta("series", "2003", status = "Continuing")),
+        )
+    }
+
+    @Test
+    fun rawRangeIsKeptVerbatim() {
+        assertEquals("2003-2007", formatMetaReleaseLineForDetails(meta("series", "2003-2007")))
+    }
 }
