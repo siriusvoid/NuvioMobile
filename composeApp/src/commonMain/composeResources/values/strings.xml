@@ -1279,6 +1279,15 @@
     <string name="settings_simkl_sign_in_description">Connect Simkl to sync lists, watched history, playback progress, and scrobbles.</string>
     <string name="settings_simkl_missing_credentials">Missing SIMKL_CLIENT_ID</string>
     <string name="settings_simkl_visit">Visit Simkl</string>
+    <string name="settings_tracking_connect_with_code">Connect with code</string>
+    <string name="settings_tracking_device_code_title">Sign in with a code</string>
+    <string name="settings_tracking_device_code_instruction">Open %1$s on any device and enter this code.</string>
+    <string name="settings_tracking_device_code_requesting">Requesting a code\u2026</string>
+    <string name="settings_tracking_device_code_copy">Copy code</string>
+    <string name="settings_tracking_device_code_copied">Code copied</string>
+    <string name="settings_tracking_device_code_open_page">Open page</string>
+    <string name="settings_tracking_device_code_waiting">Waiting for approval\u2026</string>
+    <string name="settings_tracking_device_code_cancel">Cancel</string>
     <string name="settings_simkl_invalid_callback">Simkl did not accept the sign-in callback. Please try again.</string>
     <string name="settings_simkl_authorization_expired">Simkl code expired. Start again.</string>
     <string name="settings_simkl_sign_in_failed">Could not complete Simkl sign in. Please try again.</string>
@@ -1675,6 +1684,10 @@
     <string name="trakt_authorization_denied">Authorization denied</string>
     <string name="trakt_authorization_expired_reconnect">Your Trakt authorization is no longer valid. Reconnect your Trakt account.</string>
     <string name="trakt_complete_sign_in_browser">Complete Trakt sign in in your browser</string>
+    <string name="trakt_device_request_code">Requesting a Trakt activation code…</string>
+    <string name="trakt_device_start_failed">Failed to start Trakt device authorization.</string>
+    <string name="trakt_device_code_expired">Trakt activation code expired. Please try connecting again.</string>
+    <string name="trakt_device_activation_instruction">Open %1$s and enter code %2$s. Keep Nuvio open until Trakt confirms authorization.</string>
     <string name="trakt_connected">Connected to Trakt</string>
     <string name="trakt_disconnected">Disconnected from Trakt</string>
     <string name="trakt_invalid_callback">Invalid Trakt callback</string>
