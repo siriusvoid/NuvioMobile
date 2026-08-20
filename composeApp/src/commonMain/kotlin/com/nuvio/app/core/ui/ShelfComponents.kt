@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
@@ -64,12 +66,13 @@ fun <T> NuvioShelfSection(
     modifier: Modifier = Modifier,
     headerHorizontalPadding: Dp = 0.dp,
     rowContentPadding: PaddingValues = PaddingValues(0.dp),
+    rowModifier: Modifier = Modifier,
     itemSpacing: Dp = 10.dp,
-    showHeaderAccent: Boolean = true,
     onViewAllClick: (() -> Unit)? = null,
     viewAllPillSize: NuvioViewAllPillSize = NuvioViewAllPillSize.Default,
     key: ((T) -> Any)? = null,
     animatePlacement: Boolean = false,
+    state: LazyListState = rememberLazyListState(),
     itemContent: @Composable (T) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
@@ -81,12 +84,13 @@ fun <T> NuvioShelfSection(
             NuvioShelfSectionHeader(
                 title = title,
                 modifier = Modifier.padding(horizontal = headerHorizontalPadding),
-                showAccent = showHeaderAccent,
                 onViewAllClick = onViewAllClick,
                 viewAllPillSize = viewAllPillSize,
             )
         }
         LazyRow(
+            modifier = rowModifier,
+            state = state,
             contentPadding = rowContentPadding,
             horizontalArrangement = Arrangement.spacedBy(itemSpacing),
         ) {
@@ -238,7 +242,6 @@ fun NuvioPosterCard(
 private fun NuvioShelfSectionHeader(
     title: String,
     modifier: Modifier = Modifier,
-    showAccent: Boolean = true,
     onViewAllClick: (() -> Unit)? = null,
     viewAllPillSize: NuvioViewAllPillSize = NuvioViewAllPillSize.Default,
 ) {
@@ -270,18 +273,6 @@ private fun NuvioShelfSectionHeader(
                 onClick = onViewAllClick,
                 size = viewAllPillSize,
                 modifier = viewAllPlaceholderModifier,
-            )
-        }
-        if (showAccent) {
-            Box(
-                modifier = Modifier
-                    .padding(top = NuvioTokens.Space.s6)
-                    .width(NuvioTokens.Space.s64 - NuvioTokens.Space.s4)
-                    .height(NuvioTokens.Space.s4)
-                    .background(
-                        color = tokens.colors.accent,
-                        shape = tokens.shapes.chip,
-                    ),
             )
         }
     }

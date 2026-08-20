@@ -73,9 +73,15 @@ import com.nuvio.app.features.player.SubtitleColorSwatches
 import com.nuvio.app.features.player.SubtitleLanguageOption
 import com.nuvio.app.features.player.formatPlaybackSpeedLabel
 import com.nuvio.app.features.player.languageLabelForCode
+import com.nuvio.app.features.player.subtitleFontSizeRangeSp
 import com.nuvio.app.features.player.toStorageHexString
 import com.nuvio.app.features.p2p.P2pConsentDialog
+import com.nuvio.app.features.p2p.P2pCacheClearResult
+import com.nuvio.app.features.p2p.P2pCacheSize
 import com.nuvio.app.features.p2p.P2pSettingsRepository
+import com.nuvio.app.features.p2p.P2pStreamingEngine
+import com.nuvio.app.features.p2p.P2pStreamingState
+import com.nuvio.app.features.p2p.P2pTorrentProfile
 import com.nuvio.app.features.plugins.PluginsUiState
 import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.streams.StreamAutoPlayMode
@@ -141,6 +147,31 @@ private fun formatStep(value: Float): String {
         value.toInt().toString()
     } else {
         value.toString()
+    }
+}
+
+@Composable
+private fun p2pProfileLabel(profile: P2pTorrentProfile): String = when (profile) {
+    P2pTorrentProfile.SOFT -> stringResource(Res.string.settings_p2p_profile_soft)
+    P2pTorrentProfile.BALANCED -> stringResource(Res.string.settings_p2p_profile_balanced)
+    P2pTorrentProfile.FAST -> stringResource(Res.string.settings_p2p_profile_fast)
+}
+
+@Composable
+private fun p2pCacheSizeLabel(size: P2pCacheSize): String = when (size) {
+    P2pCacheSize.NONE -> stringResource(Res.string.settings_p2p_cache_none)
+    P2pCacheSize.GB_2 -> stringResource(Res.string.settings_p2p_cache_2_gb)
+    P2pCacheSize.GB_5 -> stringResource(Res.string.settings_p2p_cache_5_gb)
+    P2pCacheSize.GB_10 -> stringResource(Res.string.settings_p2p_cache_10_gb)
+}
+
+private fun formatP2pCacheBytes(bytes: Long): String {
+    val gibibyte = 1024.0 * 1024.0 * 1024.0
+    val mebibyte = 1024.0 * 1024.0
+    return if (bytes >= gibibyte) {
+        "${kotlin.math.round(bytes / gibibyte * 10.0) / 10.0} GB"
+    } else {
+        "${kotlin.math.round(bytes / mebibyte * 10.0) / 10.0} MB"
     }
 }
 
@@ -298,12 +329,19 @@ private fun PlaybackSettingsSection(
     var showAutoPlayPluginSelectionDialog by remember { mutableStateOf(false) }
     var showAutoPlayRegexDialog by remember { mutableStateOf(false) }
     var showP2pConsentDialog by remember { mutableStateOf(false) }
+    var showP2pProfileDialog by remember { mutableStateOf(false) }
+    var showP2pCacheSizeDialog by remember { mutableStateOf(false) }
+    var p2pCacheClearResult by remember { mutableStateOf<P2pCacheClearResult?>(null) }
+    var p2pCacheClearFailed by remember { mutableStateOf(false) }
     val pluginsEnabled = AppFeaturePolicy.pluginsEnabled
     val autoPlayPlayerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
     val p2pSettings by remember {
         P2pSettingsRepository.ensureLoaded()
         P2pSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
+    val p2pCacheState by P2pStreamingEngine.cacheState.collectAsStateWithLifecycle()
+    val p2pStreamingState by P2pStreamingEngine.state.collectAsStateWithLifecycle()
+    val coroutineScope = rememberCoroutineScope()
     val availableExternalPlayers = ExternalPlayerPlatform.availablePlayers()
     val selectedExternalPlayer = availableExternalPlayers.firstOrNull {
         it.id == autoPlayPlayerSettings.externalPlayerId
@@ -474,6 +512,19 @@ private fun PlaybackSettingsSection(
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_subtitle_strip_sdh),
+                    description = stringResource(Res.string.settings_playback_subtitle_strip_sdh_description),
+                    checked = autoPlayPlayerSettings.subtitleStyle.stripSdh,
+                    enabled = otherSubtitleOptionsEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = { enabled ->
+                        PlayerSettingsRepository.setSubtitleStyle(
+                            autoPlayPlayerSettings.subtitleStyle.copy(stripSdh = enabled),
+                        )
+                    },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_subtitle_use_forced),
                     description = stringResource(Res.string.settings_playback_subtitle_use_forced_description),
                     checked = autoPlayPlayerSettings.subtitleStyle.useForcedSubtitles,
@@ -520,7 +571,7 @@ private fun PlaybackSettingsSection(
                     title = stringResource(Res.string.settings_playback_subtitle_size),
                     value = subtitleStyle.fontSizeSp,
                     valueText = stringResource(Res.string.compose_player_font_size_value, subtitleStyle.fontSizeSp),
-                    valueRange = 12..40,
+                    valueRange = subtitleFontSizeRangeSp,
                     step = 2,
                     isTablet = isTablet,
                     enabled = subtitleRenderingEnabled,
@@ -616,7 +667,7 @@ private fun PlaybackSettingsSection(
 
         if (P2pSettingsRepository.isVisible) {
             SettingsSection(
-                title = stringResource(Res.string.settings_p2p_title),
+                title = stringResource(Res.string.settings_playback_section_p2p),
                 isTablet = isTablet,
             ) {
                 SettingsGroup(isTablet = isTablet) {
@@ -640,6 +691,56 @@ private fun PlaybackSettingsSection(
                         checked = p2pSettings.hideTorrentStats,
                         isTablet = isTablet,
                         onCheckedChange = P2pSettingsRepository::setHideTorrentStats,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_p2p_profile_title),
+                        description = p2pProfileLabel(p2pSettings.torrentProfile),
+                        isTablet = isTablet,
+                        onClick = { showP2pProfileDialog = true },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_p2p_cache_size_title),
+                        description = p2pCacheSizeLabel(p2pSettings.cacheSize),
+                        isTablet = isTablet,
+                        onClick = { showP2pCacheSizeDialog = true },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    val cacheClearAvailable = p2pStreamingState !is P2pStreamingState.Connecting &&
+                        p2pStreamingState !is P2pStreamingState.Streaming &&
+                        !p2pCacheState.isClearing
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_p2p_clear_cache_title),
+                        description = when {
+                            p2pCacheState.isClearing ->
+                                stringResource(Res.string.settings_p2p_clear_cache_clearing)
+                            !cacheClearAvailable ->
+                                stringResource(Res.string.settings_p2p_clear_cache_playback_active)
+                            p2pCacheClearFailed ->
+                                stringResource(Res.string.settings_p2p_clear_cache_failed)
+                            p2pCacheClearResult != null -> stringResource(
+                                Res.string.settings_p2p_clear_cache_done,
+                                formatP2pCacheBytes(p2pCacheClearResult!!.reclaimedBytes),
+                            )
+                            !p2pCacheState.hasMeasurement ->
+                                stringResource(Res.string.settings_p2p_clear_cache_usage_pending)
+                            else -> stringResource(
+                                Res.string.settings_p2p_clear_cache_usage,
+                                formatP2pCacheBytes(p2pCacheState.usedBytes),
+                            )
+                        },
+                        enabled = cacheClearAvailable,
+                        isTablet = isTablet,
+                        onClick = {
+                            p2pCacheClearResult = null
+                            p2pCacheClearFailed = false
+                            coroutineScope.launch {
+                                runCatching { P2pStreamingEngine.clearCache() }
+                                    .onSuccess { p2pCacheClearResult = it }
+                                    .onFailure { p2pCacheClearFailed = true }
+                            }
+                        },
                     )
                 }
             }
@@ -1040,6 +1141,17 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setStreamAutoPlayNextEpisodeEnabled,
                 )
+                if (autoPlayPlayerSettings.streamAutoPlayNextEpisodeEnabled &&
+                    autoPlayPlayerSettings.streamAutoPlayMode == StreamAutoPlayMode.MANUAL) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_auto_play_next_episode_fallback),
+                        description = stringResource(Res.string.settings_playback_auto_play_next_episode_fallback_description),
+                        checked = autoPlayPlayerSettings.streamAutoPlayNextEpisodeFallbackEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setStreamAutoPlayNextEpisodeFallbackEnabled,
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_prefer_binge_group),
@@ -1206,6 +1318,45 @@ private fun PlaybackSettingsSection(
                 showPreferredAudioDialog = false
             },
             onDismiss = { showPreferredAudioDialog = false },
+        )
+    }
+
+    if (showP2pProfileDialog) {
+        IosEnumSelectionDialog(
+            title = stringResource(Res.string.settings_p2p_profile_title),
+            options = P2pTorrentProfile.entries,
+            selected = p2pSettings.torrentProfile,
+            label = { p2pProfileLabel(it) },
+            description = { profile ->
+                when (profile) {
+                    P2pTorrentProfile.SOFT ->
+                        stringResource(Res.string.settings_p2p_profile_soft_description)
+                    P2pTorrentProfile.BALANCED ->
+                        stringResource(Res.string.settings_p2p_profile_balanced_description)
+                    P2pTorrentProfile.FAST ->
+                        stringResource(Res.string.settings_p2p_profile_fast_description)
+                }
+            },
+            onSelect = { profile ->
+                P2pSettingsRepository.setTorrentProfile(profile)
+                showP2pProfileDialog = false
+            },
+            onDismiss = { showP2pProfileDialog = false },
+        )
+    }
+
+    if (showP2pCacheSizeDialog) {
+        IosEnumSelectionDialog(
+            title = stringResource(Res.string.settings_p2p_cache_size_title),
+            options = P2pCacheSize.entries,
+            selected = p2pSettings.cacheSize,
+            label = { p2pCacheSizeLabel(it) },
+            onSelect = { size ->
+                P2pSettingsRepository.setCacheSize(size)
+                p2pCacheClearResult = null
+                showP2pCacheSizeDialog = false
+            },
+            onDismiss = { showP2pCacheSizeDialog = false },
         )
     }
 
@@ -2170,7 +2321,7 @@ private fun <T> IosEnumSelectionDialog(
     title: String,
     options: List<T>,
     selected: T,
-    label: (T) -> String,
+    label: @Composable (T) -> String,
     description: @Composable (T) -> String? = { null },
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
