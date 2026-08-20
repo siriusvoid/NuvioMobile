@@ -252,15 +252,7 @@ fun DetailHero(
                         )
                     }
 
-                    if (meta.genres.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = meta.genres.take(3).joinToString(" \u2022 "),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(3.dp))
                 }
             }
         }
