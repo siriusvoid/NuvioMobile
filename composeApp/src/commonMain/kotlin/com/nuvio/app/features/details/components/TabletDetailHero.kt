@@ -59,8 +59,6 @@ import com.nuvio.app.features.details.formatRuntimeForDisplay
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.detail_logo_content_description
 import nuvio.composeapp.generated.resources.details_season_count
-import nuvio.composeapp.generated.resources.details_director
-import nuvio.composeapp.generated.resources.details_writer
 import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -325,17 +323,6 @@ fun TabletDetailHero(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-            }
-            if (showOverview) {
-                val credit = when {
-                    meta.director.isNotEmpty() -> stringResource(Res.string.details_director) to meta.director
-                    meta.writer.isNotEmpty() -> stringResource(Res.string.details_writer) to meta.writer
-                    else -> null
-                }
-                credit?.let { (label, names) ->
-                    Spacer(modifier = Modifier.height(space.s8))
-                    MetaLabelValueRow(label = label, value = names.joinToString(", "))
-                }
             }
             meta.description?.takeIf { showOverview && it.isNotBlank() }?.let { synopsis ->
                 Spacer(modifier = Modifier.height(space.s16))
