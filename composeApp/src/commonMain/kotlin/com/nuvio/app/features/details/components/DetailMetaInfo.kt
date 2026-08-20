@@ -151,20 +151,6 @@ fun DetailMetaInfo(
             )
         }
 
-        if (meta.director.isNotEmpty()) {
-            MetaLabelValueRow(
-                label = stringResource(Res.string.details_director),
-                value = meta.director.joinToString(", "),
-            )
-        }
-
-        if (meta.writer.isNotEmpty()) {
-            MetaLabelValueRow(
-                label = stringResource(Res.string.details_writer),
-                value = meta.writer.joinToString(", "),
-            )
-        }
-
         if (!meta.description.isNullOrBlank()) {
             var expanded by remember { mutableStateOf(false) }
             var canExpand by remember(meta.description) { mutableStateOf(false) }
@@ -283,26 +269,6 @@ private fun ImdbRatingSourceLabel(
             style = storeTextStyle,
             color = storeTextColor,
             maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun MetaLabelValueRow(
-    label: String,
-    value: String,
-) {
-    Row {
-        Text(
-            text = "$label:  ",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }
