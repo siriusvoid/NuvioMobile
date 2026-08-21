@@ -101,7 +101,10 @@ fun HomeHeroSection(
 ) {
     if (items.isEmpty()) return
 
-    val pagerState = rememberPagerState(pageCount = { items.size })
+    val itemCount = items.size
+    val pageCount = heroLoopPageCount(itemCount)
+    val initialPage = remember(itemCount) { heroLoopInitialPage(itemCount) }
+    val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { pageCount })
     val coroutineScope = rememberCoroutineScope()
     val autoScrollPage = pagerState.settledPage
 
@@ -123,8 +126,12 @@ fun HomeHeroSection(
             delay(100L)
         }
 
-        val nextPage = (pagerState.currentPage + 1) % items.size
-        pagerState.animateScrollToPage(nextPage)
+        val nextPage = pagerState.currentPage + 1
+        if (nextPage < pageCount) {
+            pagerState.animateScrollToPage(nextPage)
+        } else {
+            pagerState.scrollToPage(heroLoopInitialPage(itemCount))
+        }
     }
 
     BoxWithConstraints(
@@ -132,7 +139,7 @@ fun HomeHeroSection(
             .fillMaxWidth()
             .homeHeroPagerGesture(
                 pagerState = pagerState,
-                itemCount = items.size,
+                pageCount = pageCount,
                 coroutineScope = coroutineScope,
             )
             .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)),
@@ -153,20 +160,18 @@ fun HomeHeroSection(
                 }
             }
         }
-        val currentPage = pagerState.currentPage.coerceIn(items.indices)
-        val visiblePages = listOf(
-            currentPage,
-            (currentPage - 1).coerceIn(items.indices),
-            (currentPage + 1).coerceIn(items.indices),
-        ).distinct()
-            .mapNotNull { index ->
-                val pageOffset = heroPageOffset(pagerState, index)
+        val currentPage = pagerState.currentPage
+        val visiblePages = listOf(currentPage - 1, currentPage, currentPage + 1)
+            .filter { page -> page in 0 until pageCount }
+            .mapNotNull { page ->
+                val pageOffset = heroPageOffset(pagerState, page)
                 val visibility = (1f - abs(pageOffset)).coerceIn(0f, 1f)
                 if (visibility <= 0f) {
                     null
                 } else {
                     HeroPageLayer(
-                        page = index,
+                        page = page,
+                        itemIndex = heroFloorMod(page, itemCount),
                         visibility = visibility,
                         offset = pageOffset,
                     )
@@ -175,9 +180,9 @@ fun HomeHeroSection(
             .sortedBy(HeroPageLayer::visibility)
         val currentItem = visiblePages
             .lastOrNull()
-            ?.page
+            ?.itemIndex
             ?.let(items::get)
-            ?: items[currentPage]
+            ?: items[heroFloorMod(currentPage, itemCount)]
 
         Box(
             modifier = Modifier
@@ -205,8 +210,8 @@ fun HomeHeroSection(
                 ) {
                     visiblePages.forEach { layer ->
                         AsyncImage(
-                            model = items[layer.page].banner ?: items[layer.page].poster,
-                            contentDescription = items[layer.page].name,
+                            model = items[layer.itemIndex].banner ?: items[layer.itemIndex].poster,
+                            contentDescription = items[layer.itemIndex].name,
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {
@@ -278,7 +283,7 @@ fun HomeHeroSection(
                                 },
                             ) {
                                 HeroContentBlock(
-                                    item = items[layer.page],
+                                    item = items[layer.itemIndex],
                                     layout = layout,
                                     onItemClick = onItemClick,
                                 )
@@ -313,12 +318,25 @@ fun HomeHeroSection(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             items.forEachIndexed { index, _ ->
-                                val activeFraction = heroPageVisibility(pagerState, index)
+                                val activeFraction = listOf(currentPage - 1, currentPage, currentPage + 1)
+                                    .filter { page ->
+                                        page in 0 until pageCount &&
+                                            heroFloorMod(page, itemCount) == index
+                                    }
+                                    .maxOfOrNull { page -> heroPageVisibility(pagerState, page) }
+                                    ?: 0f
                                 Box(
                                     modifier = Modifier
                                         .clickable {
                                             coroutineScope.launch {
-                                                pagerState.animateScrollToPage(index)
+                                                pagerState.animateScrollToPage(
+                                                    heroNearestLoopPage(
+                                                        fromPage = pagerState.currentPage,
+                                                        targetItemIndex = index,
+                                                        itemCount = itemCount,
+                                                        pageCount = pageCount,
+                                                    ),
+                                                )
                                             }
                                         }
                                         .clip(CircleShape)
@@ -340,6 +358,7 @@ fun HomeHeroSection(
 
 private data class HeroPageLayer(
     val page: Int,
+    val itemIndex: Int,
     val visibility: Float,
     val offset: Float,
 )
@@ -533,12 +552,12 @@ private fun heroBackgroundScrollTranslationY(scrollOffsetPx: Float): Float {
 
 private fun Modifier.homeHeroPagerGesture(
     pagerState: PagerState,
-    itemCount: Int,
+    pageCount: Int,
     coroutineScope: CoroutineScope,
 ): Modifier {
-    if (itemCount <= 1) return this
+    if (pageCount <= 1) return this
 
-    return pointerInput(pagerState, itemCount) {
+    return pointerInput(pagerState, pageCount) {
         awaitEachGesture {
             val down = awaitFirstDown(pass = PointerEventPass.Initial)
             val widthPx = size.width.toFloat().takeIf { it > 0f } ?: return@awaitEachGesture
@@ -559,7 +578,7 @@ private fun Modifier.homeHeroPagerGesture(
                     if (dragging) {
                         val targetPage = resolveHeroTargetPage(
                             startPage = startPage,
-                            itemCount = itemCount,
+                            pageCount = pageCount,
                             totalDx = totalDx,
                             velocityX = velocityTracker.calculateVelocity().x,
                             widthPx = widthPx,
@@ -595,9 +614,9 @@ private fun Modifier.homeHeroPagerGesture(
     }
 }
 
-private fun resolveHeroTargetPage(
+internal fun resolveHeroTargetPage(
     startPage: Int,
-    itemCount: Int,
+    pageCount: Int,
     totalDx: Float,
     velocityX: Float,
     widthPx: Float,
@@ -606,10 +625,50 @@ private fun resolveHeroTargetPage(
         abs(velocityX) > HERO_SWIPE_VELOCITY_THRESHOLD
     if (!thresholdPassed) return startPage
 
-    val currentPage = startPage.coerceIn(0, itemCount - 1)
+    // Neighbouring virtual pages always exist, so wrapping is a single step in the
+    // direction of the swipe rather than a jump across the whole list.
     return when {
-        totalDx > 0f -> if (currentPage == 0) itemCount - 1 else currentPage - 1
-        totalDx < 0f -> if (currentPage == itemCount - 1) 0 else currentPage + 1
-        else -> currentPage
+        totalDx > 0f -> (startPage - 1).coerceAtLeast(0)
+        totalDx < 0f -> (startPage + 1).coerceAtMost(pageCount - 1)
+        else -> startPage
     }
+}
+
+// Lowest common multiple of 1..HOME_HERO_ITEM_LIMIT (8), so the anchor below divides
+// evenly by every hero count the repository can produce and always maps to the first item.
+private const val HERO_LOOP_ALIGNMENT = 840
+
+// Fixed span: it must NOT depend on the hero count, otherwise republished hero items
+// resize the range under the pager and can strand currentPage outside it. Sized for
+// headroom, not infinity: from the mid-point this is ~4200 auto-advances (>9h of
+// continuous playback) in either direction, while keeping the total scroll extent
+// small enough to stay well inside exact integer range.
+private const val HERO_LOOP_PAGE_COUNT = 8_400
+
+internal fun heroFloorMod(value: Int, divisor: Int): Int =
+    if (divisor <= 0) 0 else ((value % divisor) + divisor) % divisor
+
+/** Virtual page span: wide enough that the ends are never reached in practice. */
+internal fun heroLoopPageCount(itemCount: Int): Int =
+    if (itemCount > 1) HERO_LOOP_PAGE_COUNT else itemCount
+
+/** Starts mid-span on a multiple of the alignment, so the first item is shown first. */
+internal fun heroLoopInitialPage(itemCount: Int): Int {
+    if (itemCount <= 1) return 0
+    val middle = HERO_LOOP_PAGE_COUNT / 2
+    return middle - heroFloorMod(middle, HERO_LOOP_ALIGNMENT)
+}
+
+/** Nearest virtual page showing [targetItemIndex], so dot taps take the shortest route. */
+internal fun heroNearestLoopPage(
+    fromPage: Int,
+    targetItemIndex: Int,
+    itemCount: Int,
+    pageCount: Int,
+): Int {
+    if (itemCount <= 0) return 0
+    var delta = targetItemIndex - heroFloorMod(fromPage, itemCount)
+    if (delta > itemCount / 2) delta -= itemCount
+    if (delta < -(itemCount / 2)) delta += itemCount
+    return (fromPage + delta).coerceIn(0, pageCount - 1)
 }
