@@ -1244,6 +1244,9 @@
     <string name="settings_tracking_services">Accounts</string>
     <string name="settings_tracking_approval_redirect">After approval, you will be redirected back automatically.</string>
     <string name="settings_tracking_connect_first">Connect %1$s first</string>
+    <string name="settings_tracking_scrobbling">Scrobbler</string>
+    <string name="settings_tracking_scrobbling_description">Send playback and watched marks to your connected tracking services</string>
+    <string name="settings_tracking_scrobbling_connect_first">Connect Trakt or Simkl first</string>
     <string name="settings_tracking_disconnect_title">Disconnect %1$s?</string>
     <string name="settings_tracking_disconnect_description">This removes the connection from Nuvio. Your data on %1$s stays intact, and unavailable library or progress sources temporarily fall back to Nuvio.</string>
     <string name="settings_trakt_disconnect_description">This will disconnect your Trakt account from Nuvio.</string>

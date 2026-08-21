@@ -21,6 +21,7 @@ object TrackingScrobbleCoordinator {
         event: TrackingScrobbleEvent,
     ): List<TrackingScrobbleFailure> {
         if (profileId != ProfileRepository.activeProfileId) return emptyList()
+        if (!TrackingSettingsRepository.isScrobblingEnabled()) return emptyList()
         TrackingProviderRegistry.ensureLoaded()
         val failures = dispatchTrackingScrobble(
             scrobblers = TrackingProviderRegistry.connectedScrobblers(),
@@ -42,6 +43,7 @@ object TrackingScrobbleCoordinator {
         event: TrackingScrobbleEvent,
     ): List<TrackingScrobbleFailure> {
         if (profileId != ProfileRepository.activeProfileId) return emptyList()
+        if (!TrackingSettingsRepository.isScrobblingEnabled()) return emptyList()
         TrackingProviderRegistry.ensureLoaded()
         val failures = dispatchTrackingSeekScrobble(
             scrobblers = TrackingProviderRegistry.connectedScrobblers(),

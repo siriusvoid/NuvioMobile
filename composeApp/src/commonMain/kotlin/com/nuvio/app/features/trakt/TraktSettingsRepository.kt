@@ -52,12 +52,15 @@ enum class MoreLikeThisSourcePreference {
 
 val DEFAULT_MORE_LIKE_THIS_SOURCE: MoreLikeThisSourcePreference = MoreLikeThisSourcePreference.TRAKT
 
+const val DEFAULT_SCROBBLING_ENABLED = true
+
 data class TraktSettingsUiState(
     val watchProgressSource: WatchProgressSource = DEFAULT_WATCH_PROGRESS_SOURCE,
     val continueWatchingDaysCap: Int = TRAKT_DEFAULT_CONTINUE_WATCHING_DAYS_CAP,
     val librarySourceMode: LibrarySourceMode = DEFAULT_LIBRARY_SOURCE_MODE,
     val moreLikeThisSource: MoreLikeThisSourcePreference = DEFAULT_MORE_LIKE_THIS_SOURCE,
     val simklAnimeIdPreference: SimklAnimeIdPreference = DEFAULT_SIMKL_ANIME_ID_PREFERENCE,
+    val scrobblingEnabled: Boolean = DEFAULT_SCROBBLING_ENABLED,
 )
 
 @Serializable
@@ -67,6 +70,7 @@ private data class StoredTraktSettings(
     val librarySourceMode: String? = null,
     val moreLikeThisSource: String? = null,
     val simklAnimeIdPreference: String? = null,
+    val scrobblingEnabled: Boolean? = null,
 )
 
 object TraktSettingsRepository {
@@ -135,6 +139,13 @@ object TraktSettingsRepository {
         persist()
     }
 
+    fun setScrobblingEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (_uiState.value.scrobblingEnabled == enabled) return
+        _uiState.value = _uiState.value.copy(scrobblingEnabled = enabled)
+        persist()
+    }
+
     fun setSimklAnimeIdPreference(preference: SimklAnimeIdPreference) {
         ensureLoaded()
         if (_uiState.value.simklAnimeIdPreference == preference) return
@@ -163,6 +174,7 @@ object TraktSettingsRepository {
                 librarySourceMode = librarySourceModeFromStorage(stored.librarySourceMode),
                 moreLikeThisSource = MoreLikeThisSourcePreference.fromStorage(stored.moreLikeThisSource),
                 simklAnimeIdPreference = SimklAnimeIdPreference.fromStorage(stored.simklAnimeIdPreference),
+                scrobblingEnabled = stored.scrobblingEnabled ?: DEFAULT_SCROBBLING_ENABLED,
             )
         } else {
             TraktSettingsUiState()
@@ -178,6 +190,7 @@ object TraktSettingsRepository {
                     librarySourceMode = state.librarySourceMode.name,
                     moreLikeThisSource = state.moreLikeThisSource.name,
                     simklAnimeIdPreference = state.simklAnimeIdPreference.name,
+                    scrobblingEnabled = state.scrobblingEnabled,
                 ),
             ),
         )
