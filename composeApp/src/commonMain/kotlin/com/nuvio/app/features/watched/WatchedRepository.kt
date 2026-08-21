@@ -1274,7 +1274,9 @@ object WatchedRepository {
             }
         }
 
-        if (trackerHistorySync == WatchedTrackerHistorySync.Mirror) {
+        if (trackerHistorySync == WatchedTrackerHistorySync.Mirror &&
+            TrackingSettingsRepository.isScrobblingEnabled()
+        ) {
             TrackingProviderRegistry.connectedWatchedProviders().forEach { provider ->
                 try {
                     provider.push(profileId = profileId, items = items)
@@ -1306,6 +1308,8 @@ object WatchedRepository {
                 log.e(error) { "Failed to delete watched items from Nuvio Sync" }
             }
         }
+
+        if (!TrackingSettingsRepository.isScrobblingEnabled()) return
 
         TrackingProviderRegistry.connectedWatchedProviders().forEach { provider ->
             try {
