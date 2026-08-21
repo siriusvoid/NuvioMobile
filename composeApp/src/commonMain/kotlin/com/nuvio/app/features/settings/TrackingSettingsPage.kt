@@ -50,6 +50,9 @@ import nuvio.composeapp.generated.resources.settings_tracking_data_sources
 import nuvio.composeapp.generated.resources.settings_tracking_nuvio_library_description
 import nuvio.composeapp.generated.resources.settings_tracking_nuvio_progress_description
 import nuvio.composeapp.generated.resources.settings_tracking_progress_refresh_failed
+import nuvio.composeapp.generated.resources.settings_tracking_scrobbling
+import nuvio.composeapp.generated.resources.settings_tracking_scrobbling_connect_first
+import nuvio.composeapp.generated.resources.settings_tracking_scrobbling_description
 import nuvio.composeapp.generated.resources.settings_tracking_services
 import nuvio.composeapp.generated.resources.settings_tracking_simkl_library_description
 import nuvio.composeapp.generated.resources.settings_tracking_simkl_progress_description
@@ -245,6 +248,19 @@ private fun TrackingDataSources(
                 },
             )
         }
+        SettingsGroupDivider(isTablet = isTablet)
+        SettingsSwitchRow(
+            title = stringResource(Res.string.settings_tracking_scrobbling),
+            description = listOfNotNull(
+                stringResource(Res.string.settings_tracking_scrobbling_description),
+                stringResource(Res.string.settings_tracking_scrobbling_connect_first)
+                    .takeIf { connectedProviders.isEmpty() },
+            ).joinToString("\n"),
+            checked = settingsUiState.scrobblingEnabled,
+            enabled = connectedProviders.isNotEmpty(),
+            isTablet = isTablet,
+            onCheckedChange = TrackingSettingsRepository::setScrobblingEnabled,
+        )
     }
 
     when (activePicker) {
