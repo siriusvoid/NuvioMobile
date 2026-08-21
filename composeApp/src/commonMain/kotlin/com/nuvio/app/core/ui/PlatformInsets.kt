@@ -21,6 +21,15 @@ internal val LocalNuvioBottomNavigationOverlayPadding = staticCompositionLocalOf
 
 internal val LocalBottomInsetsConsumed = staticCompositionLocalOf { false }
 
+/** True only inside the tab host, where the system tab bar is actually on screen. */
+internal val LocalNuvioSystemTabBarActive = staticCompositionLocalOf { false }
+
+/**
+ * Trimmed off the reported top inset while the floating tab bar is up. The system reserves more
+ * room than the bar visually occupies, and the surplus reads as dead space above every tab title.
+ */
+internal val NuvioFloatingTabBarTopTrim: Dp = 48.dp
+
 /** CompositionLocal providing the shared [NuvioNavBarScrollState] so child screens can attach the nestedScrollConnection. */
 val LocalNuvioNavBarScrollState = staticCompositionLocalOf<NuvioNavBarScrollState?> { null }
 
