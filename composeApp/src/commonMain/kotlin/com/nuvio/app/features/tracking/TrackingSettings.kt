@@ -40,4 +40,18 @@ object TrackingSettingsRepository {
 
     fun setSimklAnimeIdPreference(preference: SimklAnimeIdPreference) =
         TraktSettingsRepository.setSimklAnimeIdPreference(preference)
+
+    fun setScrobblingEnabled(enabled: Boolean) =
+        TraktSettingsRepository.setScrobblingEnabled(enabled)
+
+    /**
+     * Whether Nuvio may write to connected tracking providers: playback scrobbles and
+     * watched marks alike. Reads are unaffected - library and watched state still come
+     * from the configured source, and list/watchlist writes stay under the library
+     * source setting.
+     */
+    fun isScrobblingEnabled(): Boolean {
+        ensureLoaded()
+        return uiState.value.scrobblingEnabled
+    }
 }
