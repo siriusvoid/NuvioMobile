@@ -13,6 +13,7 @@ internal val AppIconOption.labelResource: StringResource
         AppIconOption.ROSE_GOLD -> Res.string.settings_appearance_app_icon_rose_gold
         AppIconOption.COPPER -> Res.string.settings_appearance_app_icon_copper
         AppIconOption.GRAPHITE -> Res.string.settings_appearance_app_icon_graphite
+        AppIconOption.CLASSIC -> Res.string.settings_appearance_app_icon_classic
     }
 
 internal val AppIconOption.previewResource: DrawableResource
@@ -23,6 +24,7 @@ internal val AppIconOption.previewResource: DrawableResource
         AppIconOption.ROSE_GOLD -> Res.drawable.app_icon_rose_gold
         AppIconOption.COPPER -> Res.drawable.app_icon_copper
         AppIconOption.GRAPHITE -> Res.drawable.app_icon_graphite
+        AppIconOption.CLASSIC -> Res.drawable.app_icon_classic
     }
 
 internal val AppIconOption.wordmarkResource: DrawableResource
@@ -33,6 +35,7 @@ internal val AppIconOption.wordmarkResource: DrawableResource
         AppIconOption.ROSE_GOLD -> Res.drawable.app_logo_wordmark_rose_gold
         AppIconOption.COPPER -> Res.drawable.app_logo_wordmark_copper
         AppIconOption.GRAPHITE -> Res.drawable.app_logo_wordmark_graphite
+        AppIconOption.CLASSIC -> Res.drawable.app_logo_wordmark_original
     }
 
 internal fun AppTheme.wordmarkResource(fallback: AppIconOption): DrawableResource =

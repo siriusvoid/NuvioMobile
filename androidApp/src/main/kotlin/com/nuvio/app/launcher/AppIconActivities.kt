@@ -13,3 +13,5 @@ class AppIconRoseGold : MainActivity()
 class AppIconCopper : MainActivity()
 
 class AppIconGraphite : MainActivity()
+
+class AppIconClassic : MainActivity()
