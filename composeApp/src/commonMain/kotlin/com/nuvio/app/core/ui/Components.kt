@@ -85,6 +85,14 @@ fun NuvioScreen(
 ) {
     val tokens = MaterialTheme.nuvio
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val systemTabBarActive = LocalNuvioSystemTabBarActive.current
+    // The host already lays this screen out below the system tab bar, so the top inset it reports
+    // is room that has been given twice. Anything added here reads as a gap under the bar.
+    val defaultTopPadding = if (systemTabBarActive) {
+        NuvioTokens.Space.none
+    } else {
+        tokens.spacing.screenTop + statusBarTop + nuvioPlatformExtraTopPadding
+    }
     LazyColumn(
         state = listState,
         modifier = modifier
@@ -92,7 +100,7 @@ fun NuvioScreen(
             .background(tokens.colors.background),
         contentPadding = PaddingValues(
             start = horizontalPadding,
-            top = topPadding ?: tokens.spacing.screenTop + statusBarTop + nuvioPlatformExtraTopPadding,
+            top = topPadding ?: defaultTopPadding,
             end = horizontalPadding,
             bottom = nuvioSafeBottomPadding(tokens.spacing.screenBottom),
         ),
