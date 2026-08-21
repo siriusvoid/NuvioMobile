@@ -365,8 +365,11 @@ final class NativeTabIconStore: ObservableObject {
     private static let profileColorKey = "NuvioNativeProfileAvatarColor"
     private static let profileURLKey = "NuvioNativeProfileAvatarURL"
     private static let profileBackgroundKey = "NuvioNativeProfileAvatarBackgroundColor"
+    private static let liquidGlassKey = "NuvioLiquidGlassNativeTabBarEnabled"
 
     @Published private(set) var revision = 0
+    /// Mirrors the Compose-side Liquid Glass setting.
+    @Published private(set) var liquidGlassEnabled = false
     @Published private(set) var accentColor = UIColor(
         red: 0.96,
         green: 0.96,
@@ -378,6 +381,9 @@ final class NativeTabIconStore: ObservableObject {
     private var profileAvatarURL: String?
     private var profileAvatarImage: UIImage?
     private var profileAvatarTask: URLSessionDataTask?
+    /// Rasterising an icon is not free and the bar asks for all four on every body pass.
+    private var imageCache: [String: UIImage] = [:]
+    private var lastIconSignature: String?
 
     init() {
         UITabBar.appearance().unselectedItemTintColor = UIColor(
@@ -404,6 +410,16 @@ final class NativeTabIconStore: ObservableObject {
     }
 
     func image(for tab: NuvioAppTab, selected: Bool) -> UIImage {
+        let key = "\(tab.rawValue)-\(selected)"
+        if let cached = imageCache[key] {
+            return cached
+        }
+        let rendered = renderImage(for: tab, selected: selected)
+        imageCache[key] = rendered
+        return rendered
+    }
+
+    private func renderImage(for tab: NuvioAppTab, selected: Bool) -> UIImage {
         guard tab == .settings else {
             return NuvioNativeTabIcon.image(for: tab)
         }
@@ -419,14 +435,43 @@ final class NativeTabIconStore: ObservableObject {
         )
     }
 
+    /// Inputs that change what the tab artwork looks like.
+    private func iconSignature(_ defaults: UserDefaults) -> String {
+        [
+            defaults.string(forKey: Self.accentKey),
+            defaults.string(forKey: Self.profileNameKey),
+            defaults.string(forKey: Self.profileColorKey),
+            defaults.string(forKey: Self.profileBackgroundKey),
+            defaults.string(forKey: Self.profileURLKey),
+            profileAvatarImage == nil ? "0" : "1",
+        ]
+        .map { $0 ?? "" }
+        .joined(separator: "|")
+    }
+
     private func reload() {
         let defaults = UserDefaults.standard
-        accentColor = UIColor(hexString: defaults.string(forKey: Self.accentKey))
+
+        // `@Published` fires on every assignment, equal or not, so only assign on a real change.
+        let nextAccent = UIColor(hexString: defaults.string(forKey: Self.accentKey))
             ?? UIColor(red: 0.96, green: 0.96, blue: 0.96, alpha: 1)
+        if accentColor != nextAccent { accentColor = nextAccent }
+
+        let nextEnabled = defaults.bool(forKey: Self.liquidGlassKey)
+        if liquidGlassEnabled != nextEnabled { liquidGlassEnabled = nextEnabled }
+
+        let signature = iconSignature(defaults)
+        let iconsChanged = signature != lastIconSignature
+        lastIconSignature = signature
+        if iconsChanged {
+            imageCache.removeAll()
+        }
 
         let nextURL = defaults.string(forKey: Self.profileURLKey)
         guard nextURL != profileAvatarURL else {
-            revision &+= 1
+            if iconsChanged {
+                revision &+= 1
+            }
             return
         }
 
@@ -442,6 +487,7 @@ final class NativeTabIconStore: ObservableObject {
             DispatchQueue.main.async {
                 guard let self, self.profileAvatarURL == nextURL else { return }
                 self.profileAvatarImage = image
+                self.imageCache.removeAll()
                 self.revision &+= 1
             }
         }
@@ -674,7 +720,9 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIViewController {
         let controller = MainViewControllerKt.MainViewController(
             initialTabName: tab.rawValue,
-            useNativeTabBar: usesNativeTabBar,
+            // Phone only: this is read once when the controller is built, so on iPad — where the
+            // bar can be switched Off at runtime — Compose derives it from the live setting.
+            useNativeTabBar: usesNativeTabBar && UIDevice.current.userInterfaceIdiom == .phone,
             useTabletFloatingTabBar: usesTabletFloatingTabBar,
             onNavigate: { route, launchSingleTop in
                 appCoordinator.push(
@@ -1201,15 +1249,14 @@ private struct NativeProfileSwitcherView: View {
 struct NativeNavContentView: View {
     @StateObject private var appCoordinator = AppNavigationCoordinator()
     @StateObject private var iconStore = NativeTabIconStore()
-
+    /// Whether Compose should stand down and let Apple's bar own the chrome.
     private var usesNativeTabBar: Bool {
-        guard UIDevice.current.userInterfaceIdiom == .phone else {
-            return false
+        guard #available(iOS 26.0, *) else { return false }
+        switch UIDevice.current.userInterfaceIdiom {
+        case .phone: return true
+        case .pad: return iconStore.liquidGlassEnabled
+        default: return false
         }
-        if #available(iOS 26.0, *) {
-            return true
-        }
-        return false
     }
 
     private var usesTabletFloatingTabBar: Bool {
@@ -1271,7 +1318,33 @@ struct NativeNavContentView: View {
     private var nativeTabs: some View {
         TabView(selection: tabSelection) {
             ForEach(NuvioAppTab.allCases, id: \.self) { tab in
-                if tab == .settings {
+                if tab == .search {
+                    // `.search` gives the tab the trailing magnifier treatment in the system bar.
+                    Tab(value: tab, role: .search) {
+                        TabContentView(
+                            tab: tab,
+                            usesNativeTabBar: usesNativeTabBar,
+                            usesTabletFloatingTabBar: usesTabletFloatingTabBar,
+                            coordinator: appCoordinator.coordinator(for: tab),
+                            appCoordinator: appCoordinator
+                        )
+                    } label: {
+                        Label {
+                            Text(appCoordinator.title(for: tab))
+                        } icon: {
+                            Image(
+                                uiImage: iconStore.image(
+                                    for: tab,
+                                    selected: appCoordinator.selectedTab == tab
+                                )
+                            )
+                            .id(
+                                "\(tab.rawValue)-\(iconStore.revision)-" +
+                                    "\(appCoordinator.selectedTab == tab)"
+                            )
+                        }
+                    }
+                } else if tab == .settings {
                     Tab(value: tab) {
                         TabContentView(
                             tab: tab,
@@ -1340,12 +1413,14 @@ struct NativeNavContentView: View {
         .tabBarMinimizeBehavior(.automatic)
     }
 
+    /// One branch for every iOS 26 device, so changing a tab bar setting never swaps view identity
+    /// and rebuilds the embedded Compose controllers.
     @ViewBuilder
     var body: some View {
         ZStack {
             Group {
                 if appCoordinator.isMainContentMounted {
-                    if #available(iOS 26.0, *), usesNativeTabBar {
+                    if #available(iOS 26.0, *) {
                         nativeTabs
                     } else {
                         legacyTabs

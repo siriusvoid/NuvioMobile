@@ -51,10 +51,13 @@ import com.nuvio.app.core.ui.LocalScreenActive
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
+import com.nuvio.app.core.ui.LocalNuvioSystemTabBarActive
+import com.nuvio.app.core.ui.NuvioFloatingTabBarTopTrim
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.isLiquidGlassNativeTabBarSupported
+import com.nuvio.app.core.ui.usesPadLiquidGlassTabBar
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsUiState
@@ -163,8 +166,10 @@ fun SettingsScreen(
             ThemeSettingsRepository.liquidGlassNativeTabBarEnabled
         }.collectAsStateWithLifecycle()
         val useNativeNavigation = LocalUseNativeNavigation.current
+        // iPad is exempt from the `!useNativeNavigation` guard that hides the row on iPhone.
         val liquidGlassNativeTabBarSupported = remember(useNativeNavigation) {
-            !useNativeNavigation && isLiquidGlassNativeTabBarSupported()
+            usesPadLiquidGlassTabBar() ||
+                (!useNativeNavigation && isLiquidGlassNativeTabBarSupported())
         }
         val selectedAppLanguage by remember { ThemeSettingsRepository.selectedAppLanguage }.collectAsStateWithLifecycle()
         val navBarStyle by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
@@ -959,7 +964,13 @@ private fun TabletSettingsScreen(
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val activeCategory = SettingsCategory.valueOf(selectedCategory)
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val topOffset = max(statusBarPadding + 24.dp, 48.dp) + 64.dp
+    // With the system tab bar up, the reported top inset already covers the bar, so adding room
+    // for it again drops this screen below every other tab. Clear the inset once instead.
+    val topOffset = if (LocalNuvioSystemTabBarActive.current) {
+        max(statusBarPadding - NuvioFloatingTabBarTopTrim, 48.dp)
+    } else {
+        max(statusBarPadding + 24.dp, 48.dp) + 64.dp
+    }
 
     LaunchedEffect(page) {
         if (page.opensInlineOnTablet) {

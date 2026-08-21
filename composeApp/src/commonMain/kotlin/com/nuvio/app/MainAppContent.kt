@@ -79,6 +79,7 @@ import com.nuvio.app.core.ui.PosterZoomOverlayAction
 import com.nuvio.app.core.ui.PosterZoomOverlayExitAnimation
 import com.nuvio.app.core.ui.TrackingListPickerDialog
 import com.nuvio.app.core.ui.isLiquidGlassNativeTabBarSupported
+import com.nuvio.app.core.ui.usesPadLiquidGlassTabBar
 import com.nuvio.app.core.ui.localizedContinueWatchingSubtitle
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.platformExitApp
@@ -500,8 +501,10 @@ internal fun MainAppContent(
         profileSwitchLoading,
         useNativeNavigation,
     ) {
-        val visible = !useNativeNavigation &&
-            liquidGlassNativeTabBarSupported &&
+        // Under native navigation iPad drives the bar too, so this can no longer be hard-wired
+        // to false there.
+        val visible = liquidGlassNativeTabBarSupported &&
+            (!useNativeNavigation || usesPadLiquidGlassTabBar()) &&
             liquidGlassNativeTabBarEnabled &&
             initialHomeReady &&
             !profileSwitchLoading &&
