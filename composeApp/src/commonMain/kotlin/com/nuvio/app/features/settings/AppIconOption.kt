@@ -28,6 +28,10 @@ internal enum class AppIconOption(
         key = "graphite",
         platformName = "AppIconGraphite",
     ),
+    CLASSIC(
+        key = "classic",
+        platformName = "AppIconClassic",
+    ),
     ;
 
     companion object {
