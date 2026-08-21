@@ -3,6 +3,7 @@ package com.nuvio.app.core.ui
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSUserDefaults
 import platform.UIKit.UIDevice
+import platform.UIKit.UIUserInterfaceIdiomPad
 import platform.UIKit.UIUserInterfaceIdiomPhone
 
 private const val liquidGlassNativeTabBarEnabledKey = "NuvioLiquidGlassNativeTabBarEnabled"
@@ -19,10 +20,17 @@ private const val nativeProfileAvatarUrlKey = "NuvioNativeProfileAvatarURL"
 private const val nativeProfileAvatarBackgroundColorKey = "NuvioNativeProfileAvatarBackgroundColor"
 private const val nativeTabChromeDidChangeNotification = "NuvioNativeTabChromeDidChange"
 
+private fun isLiquidGlassCapableOS(): Boolean =
+    (UIDevice.currentDevice.systemVersion.substringBefore(".").toIntOrNull() ?: 0) >= 26
+
 internal actual fun isLiquidGlassNativeTabBarSupported(): Boolean {
-    return UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPhone &&
-        (UIDevice.currentDevice.systemVersion.substringBefore(".").toIntOrNull() ?: 0) >= 26
+    val idiom = UIDevice.currentDevice.userInterfaceIdiom
+    return (idiom == UIUserInterfaceIdiomPhone || idiom == UIUserInterfaceIdiomPad) &&
+        isLiquidGlassCapableOS()
 }
+
+internal actual fun usesPadLiquidGlassTabBar(): Boolean =
+    UIDevice.currentDevice.userInterfaceIdiom == UIUserInterfaceIdiomPad && isLiquidGlassCapableOS()
 
 internal actual fun publishLiquidGlassNativeTabBarEnabled(enabled: Boolean) {
     publishBool(liquidGlassNativeTabBarEnabledKey, enabled)

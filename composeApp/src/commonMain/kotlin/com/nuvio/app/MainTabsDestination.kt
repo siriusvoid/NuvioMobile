@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
 import com.nuvio.app.core.ui.LocalNuvioNavBarScrollState
+import com.nuvio.app.core.ui.LocalNuvioSystemTabBarActive
 import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.NuvioNavigationBar
 import com.nuvio.app.core.ui.PlatformBackHandler
@@ -62,8 +63,16 @@ internal fun MainTabsDestination(
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isTabletLayout = useTabletFloatingTabBar || maxWidth >= 768.dp
+        // Apple's tab bar is on screen over this content, so Compose must not draw nav chrome of
+        // its own. Read from the live setting rather than the launch-time iPhone flag, so
+        // switching modes needs no relaunch.
+        val padTabBarActive = useTabletFloatingTabBar &&
+            liquidGlassNativeTabBarSupported &&
+            liquidGlassNativeTabBarEnabled
+        // iPadOS pins the bar to the top of the window, so it owes no bottom room.
+        val padSystemTabBarActive = padTabBarActive
         val useNativeBottomTabs = if (useNativeNavigation) {
-            useNativeTabBar
+            useNativeTabBar || padTabBarActive
         } else {
             liquidGlassNativeTabBarSupported && liquidGlassNativeTabBarEnabled && initialHomeReady
         }
@@ -71,6 +80,11 @@ internal fun MainTabsDestination(
         val navBarScrollState = rememberNuvioNavBarScrollState()
         val navBarHazeState = rememberHazeState()
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
+        // The floating pill is the only chrome that reads the blur or the scroll state, and
+        // `hazeSource` captures the whole tab host every frame.
+        val composePillActive = !isTabletLayout &&
+            !useNativeBottomTabs &&
+            navBarStyleSetting != NavBarStyle.CLASSIC
 
         Scaffold(
             modifier = Modifier
@@ -116,8 +130,14 @@ internal fun MainTabsDestination(
         ) { innerPadding ->
             Box(modifier = Modifier.fillMaxSize()) {
                 CompositionLocalProvider(
-                    LocalNuvioBottomNavigationOverlayPadding provides if (useNativeBottomTabs) 49.dp else if (!isTabletLayout && navBarStyleSetting != NavBarStyle.CLASSIC) 72.dp else 0.dp,
+                    LocalNuvioBottomNavigationOverlayPadding provides when {
+                        padSystemTabBarActive -> 0.dp
+                        useNativeBottomTabs -> 49.dp
+                        !isTabletLayout && navBarStyleSetting != NavBarStyle.CLASSIC -> 72.dp
+                        else -> 0.dp
+                    },
                     LocalNuvioNavBarScrollState provides navBarScrollState,
+                    LocalNuvioSystemTabBarActive provides padSystemTabBarActive,
                 ) {
                     AppTabHost(
                         selectedTab = selectedTab,
@@ -126,8 +146,14 @@ internal fun MainTabsDestination(
                         actions = actions(isTabletLayout),
                         modifier = Modifier
                             .fillMaxSize()
-                            .then(if (navBarStyleSetting != NavBarStyle.CLASSIC) Modifier.hazeSource(state = navBarHazeState) else Modifier)
-                            .then(if (navBarStyleSetting == NavBarStyle.ADAPTIVE) Modifier.nestedScroll(navBarScrollState.nestedScrollConnection) else Modifier)
+                            .then(if (composePillActive) Modifier.hazeSource(state = navBarHazeState) else Modifier)
+                            .then(
+                                if (composePillActive && navBarStyleSetting == NavBarStyle.ADAPTIVE) {
+                                    Modifier.nestedScroll(navBarScrollState.nestedScrollConnection)
+                                } else {
+                                    Modifier
+                                },
+                            )
                             .padding(innerPadding),
                     )
                 }
@@ -141,7 +167,7 @@ internal fun MainTabsDestination(
                     )
                 }
 
-                if (!isTabletLayout && !useNativeBottomTabs && navBarStyleSetting != NavBarStyle.CLASSIC) {
+                if (composePillActive) {
                     when (navBarStyleSetting) {
                         NavBarStyle.EXPANDED -> navBarScrollState.expand()
                         NavBarStyle.COMPACT -> navBarScrollState.collapse()

@@ -191,6 +191,9 @@ fun nativeTabSelect(tabName: String) {
 
 internal expect fun isLiquidGlassNativeTabBarSupported(): Boolean
 
+/** True on an iPad that can show the Liquid Glass tab bar. */
+internal expect fun usesPadLiquidGlassTabBar(): Boolean
+
 internal expect fun publishLiquidGlassNativeTabBarEnabled(enabled: Boolean)
 
 internal expect fun publishNativeTabBarVisible(visible: Boolean)
