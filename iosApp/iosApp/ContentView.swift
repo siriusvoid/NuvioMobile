@@ -1009,7 +1009,17 @@ struct TabContentView: View {
             )
             .ignoresSafeArea(.all)
             .navigationTitle(appCoordinator.title(for: tab))
-            .navigationBarHidden(true)
+            .navigationBarTitleDisplayMode(.inline)
+            // Compose draws every tab's own header, so this bar carries nothing. It stays
+            // present rather than hidden because a pop back to the root would otherwise
+            // switch the bar off mid-gesture, and tearing the bar down is what darkens the
+            // outgoing back button for a few frames.
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Color.clear.frame(width: 1, height: 1)
+                }
+            }
+            .modifier(OverlayingToolbarBackground())
             .navigationDestination(for: RouteWrapper.self) { wrapper in
                 if appCoordinator.selectedTab == tab {
                     DetailDestinationView(
@@ -1061,14 +1071,31 @@ private struct NativeToolbarReadabilityFade: View {
     }
 }
 
+/// A bar with a background lays the content out beneath it, which pushed every tab screen
+/// down by the bar's height and made the catalogue settle into place after its transition
+/// instead of animating. Hiding the background lets the empty bar overlay the content.
+private struct OverlayingToolbarBackground: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        } else {
+            content.toolbarBackground(.hidden, for: .navigationBar)
+        }
+    }
+}
+
 @available(iOS 16.0, *)
 private struct DetailDestinationView: View {
     let wrapper: RouteWrapper
     @ObservedObject var coordinator: TabNavigationCoordinator
     @ObservedObject var appCoordinator: AppNavigationCoordinator
 
+    // The bar keeps its back button; only the title moves into Compose. A native title rides the
+    // bar, and on iPad the bar re-anchors upward when the tab bar hides on push, landing the title
+    // ~54pt from where it started. Compose draws it against a transition-stable inset instead.
     private var usesComposeNavigationHeader: Bool {
-        wrapper.route is DetailRoute || wrapper.route is StreamRoute
+        wrapper.route is DetailRoute || wrapper.route is StreamRoute || wrapper.route is CatalogRoute
     }
 
     private var respectsNativeNavigationSafeArea: Bool {
