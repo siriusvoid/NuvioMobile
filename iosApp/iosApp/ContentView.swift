@@ -18,6 +18,7 @@ private enum NuvioComposeHost {
     static func wrap(
         _ contentController: UIViewController,
         disablesInteractiveContentPopGesture: Bool = false,
+        disablesContentSwipeBack: Bool = false,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)? = nil
     ) -> RootComposeViewController {
         _ = registerPlayerBridge
@@ -25,8 +26,87 @@ private enum NuvioComposeHost {
         return RootComposeViewController(
             contentController: contentController,
             disablesInteractiveContentPopGesture: disablesInteractiveContentPopGesture,
+            disablesContentSwipeBack: disablesContentSwipeBack,
             onTabBarControllerAvailable: onTabBarControllerAvailable
         )
+    }
+}
+
+private let swipeBackExclusionRectsKey = "NuvioSwipeBackExclusionRects"
+private let swipeBackExclusionDidChangeNotification = "NuvioSwipeBackExclusionDidChange"
+
+/// Holds off the navigation controller's swipe-back-from-anywhere gesture while a touch
+/// sits over Compose content that scrolls horizontally.
+///
+/// It deliberately never recognizes. `require(toFail:)` only needs this recognizer to
+/// stay un-failed to suppress the back swipe, and staying in `.possible` means it never
+/// wins gesture arbitration - so Compose's own recognizer is never failed and the rail
+/// keeps scrolling and tapping normally.
+final class SwipeBackExclusionRecognizer: UIGestureRecognizer, UIGestureRecognizerDelegate {
+    /// Regions in the recognizer view's coordinate space, published by Compose in points.
+    var excludedRects: [CGRect] = []
+
+    /// Fires with `true` while a touch sits inside an excluded region, `false` once it
+    /// ends. Failing the back swipe is not enough on its own: it still tracks the touch
+    /// and begins arming its transition, which flashes the back button.
+    var onTouchInsideExclusionChanged: ((Bool) -> Void)?
+
+    private var isInsideExclusion = false
+
+    override init(target: Any?, action: Selector?) {
+        super.init(target: target, action: action)
+        cancelsTouchesInView = false
+        delaysTouchesBegan = false
+        delaysTouchesEnded = false
+        delegate = self
+    }
+
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        true
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesBegan(touches, with: event)
+        guard let touch = touches.first, let view else {
+            state = .failed
+            return
+        }
+        let location = touch.location(in: view)
+        if excludedRects.contains(where: { $0.contains(location) }) {
+            // Stay .possible so the back swipe waits on us and never begins, while
+            // Compose keeps full control of the touch.
+            setInsideExclusion(true)
+        } else {
+            // Outside every excluded region: fail at once so the back swipe is free.
+            state = .failed
+        }
+    }
+
+    private func setInsideExclusion(_ inside: Bool) {
+        guard isInsideExclusion != inside else { return }
+        isInsideExclusion = inside
+        onTouchInsideExclusionChanged?(inside)
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesEnded(touches, with: event)
+        setInsideExclusion(false)
+        state = .failed
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        super.touchesCancelled(touches, with: event)
+        setInsideExclusion(false)
+        state = .failed
+    }
+
+    override func reset() {
+        super.reset()
+        // Belt and braces: never leave the back swipe switched off.
+        setInsideExclusion(false)
     }
 }
 
@@ -36,15 +116,20 @@ private enum NuvioComposeHost {
 final class RootComposeViewController: UIViewController {
     private let contentController: UIViewController
     private let disablesInteractiveContentPopGesture: Bool
+    private let disablesContentSwipeBack: Bool
     private let onTabBarControllerAvailable: ((UITabBarController) -> Void)?
+    private lazy var swipeBackExclusion = SwipeBackExclusionRecognizer(target: nil, action: nil)
+    private var swipeBackExclusionObserver: NSObjectProtocol?
 
     init(
         contentController: UIViewController,
         disablesInteractiveContentPopGesture: Bool,
+        disablesContentSwipeBack: Bool,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)?
     ) {
         self.contentController = contentController
         self.disablesInteractiveContentPopGesture = disablesInteractiveContentPopGesture
+        self.disablesContentSwipeBack = disablesContentSwipeBack
         self.onTabBarControllerAvailable = onTabBarControllerAvailable
         super.init(nibName: nil, bundle: nil)
     }
@@ -70,6 +155,21 @@ final class RootComposeViewController: UIViewController {
             contentController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         contentController.didMove(toParent: self)
+
+        // contentController is pinned to every edge above, so Compose's window
+        // coordinates line up with this view's coordinate space.
+        view.addGestureRecognizer(swipeBackExclusion)
+        swipeBackExclusion.onTouchInsideExclusionChanged = { [weak self] inside in
+            self?.setContentSwipeBackSuspended(inside)
+        }
+        refreshSwipeBackExclusionRects()
+        swipeBackExclusionObserver = NotificationCenter.default.addObserver(
+            forName: Notification.Name(swipeBackExclusionDidChangeNotification),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.refreshSwipeBackExclusionRects()
+        }
     }
 
     override var childForHomeIndicatorAutoHidden: UIViewController? {
@@ -100,6 +200,35 @@ final class RootComposeViewController: UIViewController {
         .fade
     }
 
+    deinit {
+        if let swipeBackExclusionObserver {
+            NotificationCenter.default.removeObserver(swipeBackExclusionObserver)
+        }
+    }
+
+    /// Compose publishes "x,y,w,h" groups in points, separated by ";".
+    private func refreshSwipeBackExclusionRects() {
+        let encoded = UserDefaults.standard.string(forKey: swipeBackExclusionRectsKey) ?? ""
+        swipeBackExclusion.excludedRects = encoded
+            .split(separator: ";")
+            .compactMap { group in
+                let parts = group.split(separator: ",").compactMap { Double($0) }
+                guard parts.count == 4 else { return nil }
+                return CGRect(x: parts[0], y: parts[1], width: parts[2], height: parts[3])
+            }
+    }
+
+    /// Switches the back swipe off outright while a touch is held inside an excluded
+    /// region, then restores whatever this route's policy allows.
+    private func setContentSwipeBackSuspended(_ suspended: Bool) {
+        guard #available(iOS 26.0, *) else { return }
+        if suspended {
+            navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = false
+        } else {
+            configureBackGestures(isVisible: true)
+        }
+    }
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         configureBackGestures(isVisible: true)
@@ -125,8 +254,18 @@ final class RootComposeViewController: UIViewController {
     }
 
     private func configureBackGestures(isVisible: Bool) {
+        // The edge drag follows `disablesInteractiveContentPopGesture`. The iOS 26
+        // swipe-back-from-anywhere gesture additionally honours `disablesContentSwipeBack`,
+        // so a screen with horizontal rows can opt out of it while keeping the edge drag.
         if #available(iOS 26.0, *) {
-            navigationController?.interactiveContentPopGestureRecognizer?.isEnabled = false
+            let allowsContentSwipeBack =
+                !disablesInteractiveContentPopGesture && !disablesContentSwipeBack
+            if let contentPop = navigationController?.interactiveContentPopGestureRecognizer {
+                contentPop.isEnabled = isVisible ? allowsContentSwipeBack : true
+                // Apple's delegate stays in place; the gesture simply cannot begin while
+                // the touch sits inside a region Compose asked us to exclude.
+                contentPop.require(toFail: swipeBackExclusion)
+            }
         }
         navigationController?.interactivePopGestureRecognizer?.isEnabled =
             isVisible ? !disablesInteractiveContentPopGesture : true
