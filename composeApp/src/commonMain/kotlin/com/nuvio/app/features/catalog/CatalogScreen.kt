@@ -56,6 +56,7 @@ import com.nuvio.app.core.ui.nuvioCardDepth
 import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.core.ui.posterCardClickable
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
+import com.nuvio.app.core.ui.platformPhysicalTopInset
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
@@ -165,6 +166,14 @@ fun CatalogScreen(
             .background(MaterialTheme.colorScheme.background),
     ) {
         val columns = remember(maxWidth) { catalogGridColumnsForWidth(maxWidth) }
+        // Computed rather than measured: feeding the header's measured size back as the grid's
+        // inset always lands a composition late, and the inset must come from the window, since
+        // the view's own reports the tab bar's contribution until the push settles.
+        val headerHeight = if (LocalUseNativeNavigation.current) {
+            platformPhysicalTopInset() + CatalogNativeHeaderHeight
+        } else {
+            with(androidx.compose.ui.platform.LocalDensity.current) { headerHeightPx.toDp() }
+        }
 
         Box(modifier = Modifier.fillMaxSize()) {
             LazyVerticalGrid(
@@ -173,7 +182,7 @@ fun CatalogScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
                     start = 16.dp,
-                    top = with(androidx.compose.ui.platform.LocalDensity.current) { headerHeightPx.toDp() } + 12.dp,
+                    top = headerHeight + 12.dp,
                     end = 16.dp,
                     bottom = nuvioSafeBottomPadding(28.dp),
                 ),
@@ -243,12 +252,35 @@ private fun CatalogHeader(
     modifier: Modifier = Modifier,
 ) {
     if (LocalUseNativeNavigation.current) {
-        Box(
+        // The native bar still owns the back button, but its title rides the bar — and on iPad the
+        // bar re-anchors upward when the tab bar hides on push, so a native title lands ~54pt from
+        // where it started. Drawing it here keeps it with the content instead, measured from the
+        // window's inset, which a transition does not perturb.
+        Column(
             modifier = modifier
                 .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .height(44.dp),
-        )
+                .padding(top = platformPhysicalTopInset() + 8.dp)
+                .height(CatalogNativeHeaderHeight),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Top,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         return
     }
 
@@ -405,6 +437,9 @@ private fun CatalogLoadingFooter() {
         )
     }
 }
+
+/** Clears the native navigation bar this screen is pushed under, and holds the title. */
+private val CatalogNativeHeaderHeight = 100.dp
 
 private fun PosterShape.catalogAspectRatio(): Float =
     when (this) {
