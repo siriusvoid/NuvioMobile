@@ -67,6 +67,7 @@ import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.core.ui.NuvioAnimatedWatchedBadge
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioProgressBar
+import com.nuvio.app.core.ui.excludeFromSwipeBack
 import com.nuvio.app.core.ui.nuvioCardDepth
 import com.nuvio.app.core.ui.nuvioHorizontalScrollBleed
 import com.nuvio.app.core.ui.posterCardClickable
@@ -743,6 +744,7 @@ private fun EpisodeHorizontalRow(
         state = listState,
         modifier = Modifier
             .nuvioHorizontalScrollBleed(horizontalScrollPadding)
+            .excludeFromSwipeBack()
             .fillMaxWidth(),
         contentPadding = PaddingValues(
             horizontal = horizontalScrollPadding + rowMetrics.rowHorizontalPadding,
