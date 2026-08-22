@@ -951,7 +951,17 @@ struct TabContentView: View {
             )
             .ignoresSafeArea(.all)
             .navigationTitle(appCoordinator.title(for: tab))
-            .navigationBarHidden(true)
+            .navigationBarTitleDisplayMode(.inline)
+            // Compose draws every tab's own header, so this bar carries nothing. It stays
+            // present rather than hidden because a pop back to the root would otherwise
+            // switch the bar off mid-gesture, and tearing the bar down is what darkens the
+            // outgoing back button for a few frames.
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Color.clear.frame(width: 1, height: 1)
+                }
+            }
+            .modifier(OverlayingToolbarBackground())
             .navigationDestination(for: RouteWrapper.self) { wrapper in
                 if appCoordinator.selectedTab == tab {
                     DetailDestinationView(
@@ -1000,6 +1010,20 @@ private struct NativeToolbarReadabilityFade: View {
             .ignoresSafeArea(edges: .top)
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+    }
+}
+
+/// A bar with a background lays the content out beneath it, which pushed every tab screen
+/// down by the bar's height and made the catalogue settle into place after its transition
+/// instead of animating. Hiding the background lets the empty bar overlay the content.
+private struct OverlayingToolbarBackground: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        } else {
+            content.toolbarBackground(.hidden, for: .navigationBar)
+        }
     }
 }
 
