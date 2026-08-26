@@ -725,6 +725,8 @@ final class NativeProfileTabInteractionCoordinator: NSObject, UIGestureRecognize
 @MainActor
 final class AppNavigationCoordinator: ObservableObject {
     @Published var selectedTab: NuvioAppTab = .home
+    @Published private(set) var isMainContentMounted = false
+    @Published private(set) var isMainContentVisible = false
     @Published private(set) var isAppReady = false
     @Published private var localizedTabTitles: [NuvioAppTab: String] = [:]
     @Published private(set) var localizedSwitchProfileTitle = ""
@@ -735,6 +737,7 @@ final class AppNavigationCoordinator: ObservableObject {
     let searchCoordinator = TabNavigationCoordinator()
     let libraryCoordinator = TabNavigationCoordinator()
     let settingsCoordinator = TabNavigationCoordinator()
+    let appGateController = AppGateController()
     let profileSwitcherController = NativeProfileSwitcherController()
     let profileTabInteraction = NativeProfileTabInteractionCoordinator()
 
@@ -791,14 +794,24 @@ final class AppNavigationCoordinator: ObservableObject {
         isAppReady = ready
         if !ready {
             isProfileSwitcherPresented = false
-            selectedTab = .home
             allCoordinators.forEach { $0.popToRoot() }
         }
     }
 
+    func setMainContentMounted(_ mounted: Bool) {
+        isMainContentMounted = mounted
+        if !mounted {
+            isMainContentVisible = false
+            selectedTab = .home
+        }
+    }
+
+    func setMainContentVisible(_ visible: Bool) {
+        isMainContentVisible = visible
+    }
+
     func openProfileManagement() {
         isProfileSwitcherPresented = false
-        updateAppReady(false)
         profileSwitcherController.requestManageProfiles()
     }
 
@@ -866,9 +879,6 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
             onActivate: { tabName in
                 appCoordinator.activateTab(named: tabName)
             },
-            onAppReady: { ready in
-                appCoordinator.updateAppReady(ready.boolValue)
-            },
             onTabTitles: { home, search, library, profile, switchProfile, addProfile in
                 appCoordinator.updateTabTitles(
                     home: home,
@@ -879,7 +889,7 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
                     addProfile: addProfile
                 )
             },
-            nativeProfileSwitcherController: appCoordinator.profileSwitcherController
+            appGateController: appCoordinator.appGateController
         )
         return NuvioComposeHost.wrap(
             controller,
@@ -887,6 +897,35 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
                 appCoordinator.profileTabInteraction.attach(to: tabBarController)
             }
         )
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+}
+
+@available(iOS 16.0, *)
+struct AppGateComposeView: UIViewControllerRepresentable {
+    let appCoordinator: AppNavigationCoordinator
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        let controller = MainViewControllerKt.AppGateViewController(
+            appGateController: appCoordinator.appGateController,
+            nativeProfileSwitcherController: appCoordinator.profileSwitcherController,
+            onActivate: { tabName in
+                appCoordinator.activateTab(named: tabName)
+            },
+            onAppReady: { ready in
+                appCoordinator.updateAppReady(ready.boolValue)
+            },
+            onMainContentMountChanged: { mounted in
+                appCoordinator.setMainContentMounted(mounted.boolValue)
+            },
+            onMainContentVisibleChanged: { visible in
+                appCoordinator.setMainContentVisible(visible.boolValue)
+            }
+        )
+        controller.view.backgroundColor = .clear
+        controller.view.isOpaque = false
+        return controller
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
@@ -916,7 +955,8 @@ struct DetailComposeView: UIViewControllerRepresentable {
             },
             onActivate: { tabName in
                 appCoordinator.activateTab(named: tabName)
-            }
+            },
+            appGateController: appCoordinator.appGateController
         )
         return NuvioComposeHost.wrap(
             controller,
@@ -983,7 +1023,7 @@ struct TabContentView: View {
         // stack. Applying it here keeps the authentication/profile gate truly
         // full-screen on iOS 26, where a modifier on TabView itself is ignored.
         .toolbar(
-            usesNativeTabBar && appCoordinator.isAppReady && coordinator.path.isEmpty
+            usesNativeTabBar && appCoordinator.isMainContentVisible && coordinator.path.isEmpty
                 ? Visibility.visible
                 : Visibility.hidden,
             for: .tabBar
@@ -1540,10 +1580,26 @@ struct NativeNavContentView: View {
     /// and rebuilds the embedded Compose controllers.
     @ViewBuilder
     var body: some View {
-        if #available(iOS 26.0, *) {
-            nativeTabs
-        } else {
-            legacyTabs
+        ZStack {
+            Group {
+                if appCoordinator.isMainContentMounted {
+                    if #available(iOS 26.0, *) {
+                        nativeTabs
+                    } else {
+                        legacyTabs
+                    }
+                } else {
+                    Color(uiColor: nuvioBackgroundColor)
+                        .ignoresSafeArea(.all)
+                }
+            }
+            .zIndex(0)
+
+            AppGateComposeView(appCoordinator: appCoordinator)
+                .ignoresSafeArea(.all)
+                .allowsHitTesting(!appCoordinator.isAppReady)
+                .accessibilityHidden(appCoordinator.isAppReady)
+                .zIndex(1)
         }
     }
 }
