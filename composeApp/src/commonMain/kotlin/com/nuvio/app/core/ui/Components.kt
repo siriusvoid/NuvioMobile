@@ -166,7 +166,12 @@ fun NuvioScreenHeader(
         )
         return
     }
-    val resolvedTopPadding = topPadding ?: if (includeStatusBarPadding) statusBarTop else NuvioTokens.Space.none
+    val headerStatusBarTop = if (LocalNuvioSystemTabBarActive.current) {
+        (statusBarTop - NuvioFloatingTabBarTopTrim).coerceAtLeast(NuvioTokens.Space.none)
+    } else {
+        statusBarTop
+    }
+    val resolvedTopPadding = topPadding ?: if (includeStatusBarPadding) headerStatusBarTop else NuvioTokens.Space.none
     Box(
         modifier = modifier.fillMaxWidth(),
     ) {
