@@ -1,8 +1,10 @@
 package com.nuvio.app
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.window.ComposeUIViewController
+import com.nuvio.app.core.ui.LocalSwipeBackExclusionOwner
 import com.nuvio.app.core.ui.NativeProfileSwitcherController
 import com.nuvio.app.navigation.AppRoute
 import platform.UIKit.UIColor
@@ -18,6 +20,7 @@ fun MainViewController(): UIViewController = nuvioComposeViewController {
 @Suppress("unused")
 fun MainViewController(
     initialTabName: String,
+    swipeBackOwnerId: String,
     useNativeTabBar: Boolean,
     useTabletFloatingTabBar: Boolean,
     onNavigate: (AppRoute, Boolean) -> Unit,
@@ -28,7 +31,7 @@ fun MainViewController(
     appGateController: AppGateController,
 ): UIViewController {
     val initialTab = AppScreenTab.fromName(initialTabName)
-    return nuvioComposeViewController {
+    return nuvioComposeViewController(swipeBackOwnerId = swipeBackOwnerId) {
         App(
             initialTab = initialTab,
             useNativeNavigation = true,
@@ -49,12 +52,13 @@ fun MainViewController(
 @Suppress("unused")
 fun ScreenViewController(
     route: AppRoute,
+    swipeBackOwnerId: String,
     onNavigate: (AppRoute, Boolean) -> Unit,
     onGoBack: () -> Unit,
     onReplace: (AppRoute) -> Unit,
     onActivate: (String) -> Unit,
     appGateController: AppGateController,
-): UIViewController = nuvioComposeViewController {
+): UIViewController = nuvioComposeViewController(swipeBackOwnerId = swipeBackOwnerId) {
     App(
         initialRoute = route,
         useNativeNavigation = true,
@@ -97,10 +101,15 @@ fun AppGateViewController(
 }
 
 private fun nuvioComposeViewController(
+    swipeBackOwnerId: String = "",
     content: @androidx.compose.runtime.Composable () -> Unit,
 ): UIViewController = ComposeUIViewController(
     configure = { onFocusBehavior = OnFocusBehavior.DoNothing },
-    content = content,
+    content = {
+        CompositionLocalProvider(LocalSwipeBackExclusionOwner provides swipeBackOwnerId) {
+            content()
+        }
+    },
 ).apply {
     view.backgroundColor = nuvioBackgroundColor
 }

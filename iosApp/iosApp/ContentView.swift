@@ -17,6 +17,7 @@ private enum NuvioComposeHost {
 
     static func wrap(
         _ contentController: UIViewController,
+        swipeBackOwnerId: String = "",
         disablesInteractiveContentPopGesture: Bool = false,
         disablesContentSwipeBack: Bool = false,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)? = nil
@@ -25,6 +26,7 @@ private enum NuvioComposeHost {
         contentController.view.backgroundColor = nuvioBackgroundColor
         return RootComposeViewController(
             contentController: contentController,
+            swipeBackOwnerId: swipeBackOwnerId,
             disablesInteractiveContentPopGesture: disablesInteractiveContentPopGesture,
             disablesContentSwipeBack: disablesContentSwipeBack,
             onTabBarControllerAvailable: onTabBarControllerAvailable
@@ -115,6 +117,9 @@ final class SwipeBackExclusionRecognizer: UIGestureRecognizer, UIGestureRecogniz
 /// to the deepest child that requests them.
 final class RootComposeViewController: UIViewController {
     private let contentController: UIViewController
+    /// Native navigation gives every route its own Compose host, each reporting bounds in
+    /// its own coordinate space, so a host must ignore the regions its neighbours publish.
+    private let swipeBackOwnerId: String
     private let disablesInteractiveContentPopGesture: Bool
     private let disablesContentSwipeBack: Bool
     private let onTabBarControllerAvailable: ((UITabBarController) -> Void)?
@@ -123,11 +128,13 @@ final class RootComposeViewController: UIViewController {
 
     init(
         contentController: UIViewController,
+        swipeBackOwnerId: String,
         disablesInteractiveContentPopGesture: Bool,
         disablesContentSwipeBack: Bool,
         onTabBarControllerAvailable: ((UITabBarController) -> Void)?
     ) {
         self.contentController = contentController
+        self.swipeBackOwnerId = swipeBackOwnerId
         self.disablesInteractiveContentPopGesture = disablesInteractiveContentPopGesture
         self.disablesContentSwipeBack = disablesContentSwipeBack
         self.onTabBarControllerAvailable = onTabBarControllerAvailable
@@ -206,13 +213,18 @@ final class RootComposeViewController: UIViewController {
         }
     }
 
-    /// Compose publishes "x,y,w,h" groups in points, separated by ";".
+    /// Compose publishes "owner|x,y,w,h" groups in points, separated by ";". An empty
+    /// owner belongs to every host, which is what the single-host fallback publishes.
     private func refreshSwipeBackExclusionRects() {
         let encoded = UserDefaults.standard.string(forKey: swipeBackExclusionRectsKey) ?? ""
         swipeBackExclusion.excludedRects = encoded
             .split(separator: ";")
             .compactMap { group in
-                let parts = group.split(separator: ",").compactMap { Double($0) }
+                let fields = group.split(separator: "|", maxSplits: 1, omittingEmptySubsequences: false)
+                guard fields.count == 2 else { return nil }
+                let owner = String(fields[0])
+                guard owner.isEmpty || owner == swipeBackOwnerId else { return nil }
+                let parts = fields[1].split(separator: ",").compactMap { Double($0) }
                 guard parts.count == 4 else { return nil }
                 return CGRect(x: parts[0], y: parts[1], width: parts[2], height: parts[3])
             }
@@ -857,8 +869,10 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
+        let swipeBackOwnerId = UUID().uuidString
         let controller = MainViewControllerKt.MainViewController(
             initialTabName: tab.rawValue,
+            swipeBackOwnerId: swipeBackOwnerId,
             // Phone only: this is read once when the controller is built, so on iPad — where the
             // bar can be switched Off at runtime — Compose derives it from the live setting.
             useNativeTabBar: usesNativeTabBar && UIDevice.current.userInterfaceIdiom == .phone,
@@ -893,6 +907,7 @@ struct NativeNavComposeView: UIViewControllerRepresentable {
         )
         return NuvioComposeHost.wrap(
             controller,
+            swipeBackOwnerId: swipeBackOwnerId,
             onTabBarControllerAvailable: { tabBarController in
                 appCoordinator.profileTabInteraction.attach(to: tabBarController)
             }
@@ -938,8 +953,10 @@ struct DetailComposeView: UIViewControllerRepresentable {
     let appCoordinator: AppNavigationCoordinator
 
     func makeUIViewController(context: Context) -> UIViewController {
+        let swipeBackOwnerId = UUID().uuidString
         let controller = MainViewControllerKt.ScreenViewController(
             route: route,
+            swipeBackOwnerId: swipeBackOwnerId,
             onNavigate: { newRoute, launchSingleTop in
                 appCoordinator.push(
                     newRoute,
@@ -960,6 +977,7 @@ struct DetailComposeView: UIViewControllerRepresentable {
         )
         return NuvioComposeHost.wrap(
             controller,
+            swipeBackOwnerId: swipeBackOwnerId,
             disablesInteractiveContentPopGesture: route is PlayerRoute
         )
     }

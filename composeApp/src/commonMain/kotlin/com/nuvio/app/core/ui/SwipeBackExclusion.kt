@@ -3,6 +3,7 @@ package com.nuvio.app.core.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -21,6 +22,18 @@ import kotlin.random.Random
  * Rectangles are published in density-independent units, which map 1:1 to iOS points.
  */
 internal expect fun publishSwipeBackExclusionRects(encoded: String)
+
+/**
+ * Identifies the host that owns the current composition.
+ *
+ * Native navigation gives every route its own Compose host, and each one reports bounds
+ * in its own coordinate space. Tagging rectangles with their host lets a screen apply
+ * only its own regions instead of inheriting the ones a screen further down the stack
+ * published and has not disposed - a details screen's episode rail would otherwise keep
+ * a matching band of the streams screen above it unswipeable. Empty means "every host",
+ * which is what the single-host fallback wants.
+ */
+internal val LocalSwipeBackExclusionOwner = staticCompositionLocalOf { "" }
 
 internal object SwipeBackExclusionRegistry {
     private val regions = mutableMapOf<String, String>()
@@ -46,6 +59,7 @@ internal object SwipeBackExclusionRegistry {
 @Composable
 internal fun Modifier.excludeFromSwipeBack(): Modifier {
     val key = remember { "swipe-back-exclusion-${Random.nextLong().toULong().toString(16)}" }
+    val owner = LocalSwipeBackExclusionOwner.current
     val density = LocalDensity.current
 
     DisposableEffect(key) {
@@ -59,15 +73,13 @@ internal fun Modifier.excludeFromSwipeBack(): Modifier {
             return@onGloballyPositioned
         }
         with(density) {
-            SwipeBackExclusionRegistry.update(
-                key,
-                listOf(
-                    bounds.left.toDp().value,
-                    bounds.top.toDp().value,
-                    bounds.width.toDp().value,
-                    bounds.height.toDp().value,
-                ).joinToString(separator = ","),
-            )
+            val rect = listOf(
+                bounds.left.toDp().value,
+                bounds.top.toDp().value,
+                bounds.width.toDp().value,
+                bounds.height.toDp().value,
+            ).joinToString(separator = ",")
+            SwipeBackExclusionRegistry.update(key, "$owner|$rect")
         }
     }
 }
