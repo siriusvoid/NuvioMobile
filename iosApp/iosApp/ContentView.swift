@@ -112,6 +112,78 @@ final class SwipeBackExclusionRecognizer: UIGestureRecognizer, UIGestureRecogniz
     }
 }
 
+/// Lets touches that miss the navigation bar's own controls reach the Compose content
+/// underneath it.
+///
+/// The bar answers hit tests across its entire width, not just where its buttons are, so
+/// anything Compose draws inside the bar's band sits in dead space - the streams provider
+/// filter row landed there and could not be tapped at all. Answering only for the bar's own
+/// controls keeps the native back button working and hands every other touch back to Compose.
+///
+/// SwiftUI creates the bar, so the behaviour is installed by giving the live instance a
+/// subclass of whatever class it already has, the way KVO does. Nothing here names a private
+/// class: the superclass is read off the instance at runtime, and a bar that cannot be
+/// patched simply keeps its stock behaviour.
+///
+/// UIKit still does the hit testing - the override only reinterprets the answer - so bar
+/// buttons keep the enlarged touch targets UIKit gives them. An empty stretch of bar answers
+/// with the bar or one of its container subviews, while a real item answers with something
+/// nested deeper inside one; that depth is what separates chrome from an item, which holds
+/// for UIKit buttons and hosted SwiftUI items alike.
+private enum NavigationBarTouchPassthrough {
+    private static let subclassPrefix = "NuvioPassthrough_"
+    private static var patchedClasses: [String: AnyClass] = [:]
+
+    static func install(on bar: UINavigationBar) {
+        guard let currentClass = object_getClass(bar) else { return }
+        let currentName = NSStringFromClass(currentClass)
+        guard !currentName.hasPrefix(subclassPrefix) else { return }
+
+        if let existing = patchedClasses[currentName] {
+            object_setClass(bar, existing)
+            return
+        }
+
+        let subclassName = subclassPrefix + currentName
+        let subclass: AnyClass
+        if let alreadyRegistered = NSClassFromString(subclassName) {
+            subclass = alreadyRegistered
+        } else {
+            guard let allocated = objc_allocateClassPair(currentClass, subclassName, 0) else { return }
+            let selector = #selector(UIView.hitTest(_:with:))
+            typealias HitTest = @convention(c) (UIView, Selector, CGPoint, UIEvent?) -> UIView?
+            guard let inherited = class_getMethodImplementation(currentClass, selector) else {
+                objc_disposeClassPair(allocated)
+                return
+            }
+            let callInherited = unsafeBitCast(inherited, to: HitTest.self)
+
+            let hitTest: @convention(block) (UIView, CGPoint, UIEvent?) -> UIView? = { bar, point, event in
+                guard let hit = callInherited(bar, selector, point, event) else { return nil }
+                // The bar itself, or one of its container subviews, means the touch landed on
+                // empty chrome; anything nested deeper is a real item and keeps the hit.
+                if hit === bar { return nil }
+                if bar.subviews.contains(where: { $0 === hit }) { return nil }
+                return hit
+            }
+            guard class_addMethod(
+                allocated,
+                selector,
+                imp_implementationWithBlock(hitTest),
+                "@@:{CGPoint=dd}@"
+            ) else {
+                objc_disposeClassPair(allocated)
+                return
+            }
+            objc_registerClassPair(allocated)
+            subclass = allocated
+        }
+
+        patchedClasses[currentName] = subclass
+        object_setClass(bar, subclass)
+    }
+}
+
 /// A navigation-neutral container for Compose. The MPV player is nested below the
 /// Compose controller, so UIKit's immersive-system-UI queries need to be forwarded
 /// to the deepest child that requests them.
@@ -244,6 +316,9 @@ final class RootComposeViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         configureBackGestures(isVisible: true)
+        if let navigationBar = navigationController?.navigationBar {
+            NavigationBarTouchPassthrough.install(on: navigationBar)
+        }
     }
 
     override func viewDidAppear(_ animated: Bool) {
