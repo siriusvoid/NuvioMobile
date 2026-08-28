@@ -57,6 +57,13 @@ data class ManagedAddon(
     val isActive: Boolean
         get() = enabled && manifest != null
 
+    /**
+     * Generated locally rather than installed from a URL — the WebDAV library.
+     * Virtual addons stay out of local persistence and out of account sync.
+     */
+    val isVirtual: Boolean
+        get() = manifestUrl.startsWith(com.nuvio.app.features.webdav.WebDavAddonService.SCHEME)
+
     val displayTitle: String
         get() = userSetName?.takeIf { it.isNotBlank() && it != manifest?.name }
             ?: manifest?.name
