@@ -33,6 +33,9 @@ object SubtitleForwarder {
                 val allSubtitles = SubtitleRepository.addonSubtitles.value
 
                 val filtered = allSubtitles.filter { subtitle ->
+                    // Imported files live inside this app's container, which another
+                    // player has no way to open.
+                    if (subtitle.isLocalFile) return@filter false
                     languageMatchesPreference(subtitle.language, preferredLanguage) ||
                         (secondaryLanguage != null &&
                             languageMatchesPreference(subtitle.language, secondaryLanguage))

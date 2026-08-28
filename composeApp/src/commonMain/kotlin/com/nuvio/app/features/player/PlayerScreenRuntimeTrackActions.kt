@@ -1,5 +1,7 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.subtitles.ImportedSubtitleRepository
+
 internal val PlayerScreenRuntime.subtitleStyle: SubtitleStyleState
     get() = playerSettingsUiState.subtitleStyle
 
@@ -123,7 +125,11 @@ internal fun PlayerScreenRuntime.restorePersistedTrackPreferenceIfNeeded() {
             }
         }
         PersistedSubtitleSelectionType.ADDON -> {
-            val url = preference.addonSubtitleUrl?.takeIf { it.isNotBlank() }
+            val url = preference.addonSubtitleUrl
+                ?.takeIf { it.isNotBlank() }
+                // An imported file was saved under the container path of the day, and
+                // iOS renames that container on update.
+                ?.let { ImportedSubtitleRepository.resolveStoredPath(it) ?: it }
             if (url != null) {
                 selectedAddonSubtitleId = url ?: preference.addonSubtitleId
                 selectedSubtitleIndex = -1

@@ -81,9 +81,13 @@ private suspend fun parseAddonSubtitles(response: String, request: SubtitleAddon
             display = getString(
                 Res.string.player_addon_subtitle_display_format,
                 getLanguageLabelForCode(language),
-                request.addonName,
+                // A subtitle that names itself says something the
+                // addon's own name cannot, such as which fansub
+                // group's translation this is.
+                obj.subtitleName() ?: request.addonName,
             ),
             addonName = request.addonName,
+            isLocalFile = !url.startsWith("http", ignoreCase = true),
         )
     }
 }
@@ -96,6 +100,9 @@ private fun AddonResource.supportsSubtitleType(type: String, videoId: String): B
     val typeMatches = types.isEmpty() || types.any { canonicalSubtitleType(it).equals(canonical, ignoreCase = true) }
     return typeMatches && (idPrefixes.isEmpty() || idPrefixes.any { videoId.startsWith(it) })
 }
+
+private fun JsonObject.subtitleName(): String? =
+    stringValue("name") ?: stringValue("title")
 
 private fun JsonObject.stringValue(name: String): String? =
     this[name]?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotBlank() }
