@@ -2,6 +2,8 @@ package com.nuvio.app.features.addons
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.network.SupabaseProvider
+import com.nuvio.app.features.webdav.WebDavAddonService
+import com.nuvio.app.features.webdav.WebDavLibraryRepository
 import com.nuvio.app.core.sync.putSyncOriginClientId
 import com.nuvio.app.features.profiles.ProfileRepository
 import io.github.jan.supabase.postgrest.postgrest
@@ -68,14 +70,19 @@ object AddonRepository {
         currentProfileId = effectiveProfileId
         log.d { "initialize() — loading local addons for profile $currentProfileId" }
 
+        WebDavLibraryRepository.initialize()
+
         val storedUrls = dedupeManifestUrls(AddonStorage.loadInstalledAddonUrls(currentProfileId))
         val enabledByUrl = loadLocalEnabledStates()
         log.d { "initialize() — local addon count: ${storedUrls.size}" }
-        if (storedUrls.isEmpty()) return
+        if (storedUrls.isEmpty()) {
+            syncWebDavAddon()
+            return
+        }
 
         val existingByUrl = _uiState.value.addons.associateBy(ManagedAddon::manifestUrl)
-        _uiState.value = AddonsUiState(
-            addons = storedUrls.map { manifestUrl ->
+        publishInstalledAddons(
+            storedUrls.map { manifestUrl ->
                 existingByUrl[manifestUrl].toPendingAddon(
                     manifestUrl = manifestUrl,
                     enabled = enabledByUrl[manifestUrl],
@@ -173,8 +180,8 @@ object AddonRepository {
                     log.w { "pullFromServer() — remote empty while local has ${localUrls.size} addons; preserving local addons" }
                     val enabledByUrl = loadLocalEnabledStates()
                     val existingByUrl = _uiState.value.addons.associateBy(ManagedAddon::manifestUrl)
-                    _uiState.value = AddonsUiState(
-                        addons = localUrls.map { url ->
+                    publishInstalledAddons(
+                        localUrls.map { url ->
                             existingByUrl[url].toPendingAddon(
                                 manifestUrl = url,
                                 enabled = enabledByUrl[url],
@@ -196,8 +203,8 @@ object AddonRepository {
             }
 
             val existingByUrl = _uiState.value.addons.associateBy(ManagedAddon::manifestUrl)
-            _uiState.value = AddonsUiState(
-                addons = urls.map { url ->
+            publishInstalledAddons(
+                urls.map { url ->
                     val row = rowsByUrl[url]
                     existingByUrl[url].toPendingAddon(
                         manifestUrl = url,
@@ -275,6 +282,7 @@ object AddonRepository {
 
     fun removeAddon(manifestUrl: String) {
         if (isUsingPrimaryAddonsFromSecondaryProfile()) return
+        if (manifestUrl.startsWith(WebDavAddonService.SCHEME)) return
         log.i { "removeAddon() — $manifestUrl" }
         var changed = false
         _uiState.update { current ->
@@ -401,10 +409,43 @@ object AddonRepository {
         activeRefreshJobs[manifestUrl] = refreshJob
     }
 
+    /**
+     * Replaces the installed addon list. Every wholesale rebuild goes through here:
+     * the list is reconstructed from installed URLs, which would otherwise drop the
+     * generated WebDAV addon on every profile pull.
+     */
+    private fun publishInstalledAddons(addons: List<ManagedAddon>) {
+        _uiState.value = AddonsUiState(addons = addons)
+        syncWebDavAddon()
+    }
+
+    /**
+     * Rebuilds the generated WebDAV addon from the current sources. Called whenever
+     * the library changes, so catalogue rows follow the index without a restart.
+     */
+    fun syncWebDavAddon() {
+        val sources = WebDavLibraryRepository.uiState.value.sources.filter { it.enabled }
+        _uiState.update { current ->
+            val installed = current.addons.filterNot { it.isVirtual }
+            if (sources.isEmpty()) {
+                current.copy(addons = installed)
+            } else {
+                current.copy(
+                    addons = installed + ManagedAddon(
+                        manifestUrl = WebDavAddonService.MANIFEST_URL,
+                        manifest = WebDavAddonService.manifest(sources),
+                        enabled = true,
+                    ),
+                )
+            }
+        }
+    }
+
     private fun pushToServer() {
         if (isUsingPrimaryAddonsFromSecondaryProfile()) return
         val profileId = currentProfileId
         val addons = _uiState.value.addons
+            .filterNot { it.isVirtual }
             .distinctBy { it.manifestUrl }
             .mapIndexed { index, addon ->
                 AddonPushItem(
@@ -458,7 +499,7 @@ object AddonRepository {
     }
 
     private fun persist() {
-        val addons = _uiState.value.addons
+        val addons = _uiState.value.addons.filterNot { it.isVirtual }
         AddonStorage.saveInstalledAddonUrls(
             currentProfileId,
             dedupeManifestUrls(addons.map { it.manifestUrl }),

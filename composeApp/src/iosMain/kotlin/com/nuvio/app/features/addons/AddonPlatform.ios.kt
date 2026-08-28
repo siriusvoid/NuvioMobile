@@ -176,7 +176,14 @@ actual suspend fun httpRequestRaw(
             headers.forEach { (key, value) ->
                 header(key, value)
             }
-            if (this.method == HttpMethod.Post || this.method == HttpMethod.Put || this.method == HttpMethod.Patch) {
+            // WebDAV verbs (PROPFIND) carry an XML body, so key this off the body
+            // rather than a fixed method list. GET and HEAD never take one.
+            val bodylessMethod = this.method == HttpMethod.Get || this.method == HttpMethod.Head
+            val carriesBody = this.method == HttpMethod.Post ||
+                this.method == HttpMethod.Put ||
+                this.method == HttpMethod.Patch ||
+                body.isNotEmpty()
+            if (!bodylessMethod && carriesBody) {
                 setBody(body)
             }
         }

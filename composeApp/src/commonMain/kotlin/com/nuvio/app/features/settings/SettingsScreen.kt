@@ -67,6 +67,9 @@ import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.home.HomeCatalogSettingsItem
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.mdblist.MdbListSettings
+import com.nuvio.app.features.webdav.MatchReviewRow
+import com.nuvio.app.features.webdav.WebDavLibraryRepository
+import com.nuvio.app.features.webdav.WebDavUiState
 import com.nuvio.app.features.mdblist.MdbListSettingsRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsUiState
@@ -183,6 +186,23 @@ fun SettingsScreen(
             DebridSettingsRepository.ensureLoaded()
             DebridSettingsRepository.uiState
         }.collectAsStateWithLifecycle()
+        val webDavState by remember {
+            WebDavLibraryRepository.initialize()
+            WebDavLibraryRepository.uiState
+        }.collectAsStateWithLifecycle()
+        var webDavReviewSourceId by rememberSaveable { mutableStateOf<String?>(null) }
+        var webDavReviewRefreshToken by remember { mutableStateOf(0) }
+        var webDavReviewRows by remember { mutableStateOf<List<MatchReviewRow>>(emptyList()) }
+        val onWebDavReviewSourceChange: (String) -> Unit = { webDavReviewSourceId = it }
+        val onWebDavReviewRefresh: () -> Unit = { webDavReviewRefreshToken++ }
+        LaunchedEffect(webDavReviewSourceId, webDavReviewRefreshToken, webDavState.sources) {
+            val sourceId = webDavReviewSourceId
+            webDavReviewRows = if (sourceId == null) {
+                emptyList()
+            } else {
+                WebDavLibraryRepository.reviewRows(sourceId)
+            }
+        }
         val traktAuthUiState by remember {
             TraktAuthRepository.ensureLoaded()
             TraktAuthRepository.uiState
@@ -421,6 +441,11 @@ fun SettingsScreen(
                 tmdbSettings = tmdbSettings,
                 mdbListSettings = mdbListSettings,
                 debridSettings = debridSettings,
+                webDavState = webDavState,
+                webDavReviewSourceId = webDavReviewSourceId,
+                webDavReviewRows = webDavReviewRows,
+                onWebDavReviewSourceChange = onWebDavReviewSourceChange,
+                onWebDavReviewRefresh = onWebDavReviewRefresh,
                 traktAuthUiState = traktAuthUiState,
                 simklAuthUiState = simklAuthUiState,
                 traktCommentsEnabled = traktCommentsEnabled,
@@ -485,6 +510,11 @@ fun SettingsScreen(
                 tmdbSettings = tmdbSettings,
                 mdbListSettings = mdbListSettings,
                 debridSettings = debridSettings,
+                webDavState = webDavState,
+                webDavReviewSourceId = webDavReviewSourceId,
+                webDavReviewRows = webDavReviewRows,
+                onWebDavReviewSourceChange = onWebDavReviewSourceChange,
+                onWebDavReviewRefresh = onWebDavReviewRefresh,
                 traktAuthUiState = traktAuthUiState,
                 simklAuthUiState = simklAuthUiState,
                 traktCommentsEnabled = traktCommentsEnabled,
@@ -559,6 +589,11 @@ private fun MobileSettingsScreen(
     tmdbSettings: TmdbSettings,
     mdbListSettings: MdbListSettings,
     debridSettings: DebridSettings,
+    webDavState: WebDavUiState,
+    webDavReviewSourceId: String?,
+    webDavReviewRows: List<MatchReviewRow>,
+    onWebDavReviewSourceChange: (String) -> Unit,
+    onWebDavReviewRefresh: () -> Unit,
     traktAuthUiState: TraktAuthUiState,
     simklAuthUiState: SimklAuthUiState,
     traktCommentsEnabled: Boolean,
@@ -810,6 +845,21 @@ private fun MobileSettingsScreen(
                     onTmdbClick = { onPageChange(SettingsPage.TmdbEnrichment) },
                     onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
                     onDebridClick = { onPageChange(SettingsPage.Debrid) },
+                    onWebDavClick = { onPageChange(SettingsPage.WebDavLibrary) },
+                )
+                SettingsPage.WebDavLibrary -> webDavSettingsContent(
+                    isTablet = false,
+                    state = webDavState,
+                    onReviewClick = { sourceId ->
+                        onWebDavReviewSourceChange(sourceId)
+                        onPageChange(SettingsPage.WebDavReview)
+                    },
+                )
+                SettingsPage.WebDavReview -> webDavReviewContent(
+                    isTablet = false,
+                    sourceId = webDavReviewSourceId,
+                    rows = webDavReviewRows,
+                    onChanged = onWebDavReviewRefresh,
                 )
                 SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                     isTablet = false,
@@ -923,6 +973,11 @@ private fun TabletSettingsScreen(
     tmdbSettings: TmdbSettings,
     mdbListSettings: MdbListSettings,
     debridSettings: DebridSettings,
+    webDavState: WebDavUiState,
+    webDavReviewSourceId: String?,
+    webDavReviewRows: List<MatchReviewRow>,
+    onWebDavReviewSourceChange: (String) -> Unit,
+    onWebDavReviewRefresh: () -> Unit,
     traktAuthUiState: TraktAuthUiState,
     simklAuthUiState: SimklAuthUiState,
     traktCommentsEnabled: Boolean,
@@ -1236,6 +1291,21 @@ private fun TabletSettingsScreen(
                         onTmdbClick = { onPageChange(SettingsPage.TmdbEnrichment) },
                         onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
                         onDebridClick = { onPageChange(SettingsPage.Debrid) },
+                        onWebDavClick = { onPageChange(SettingsPage.WebDavLibrary) },
+                    )
+                    SettingsPage.WebDavLibrary -> webDavSettingsContent(
+                        isTablet = true,
+                        state = webDavState,
+                        onReviewClick = { sourceId ->
+                            onWebDavReviewSourceChange(sourceId)
+                            onPageChange(SettingsPage.WebDavReview)
+                        },
+                    )
+                    SettingsPage.WebDavReview -> webDavReviewContent(
+                        isTablet = true,
+                        sourceId = webDavReviewSourceId,
+                        rows = webDavReviewRows,
+                        onChanged = onWebDavReviewRefresh,
                     )
                     SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                         isTablet = true,
