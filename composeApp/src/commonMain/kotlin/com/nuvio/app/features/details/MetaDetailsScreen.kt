@@ -45,6 +45,8 @@ import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.LocalOverscrollFactory
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.derivedStateOf
@@ -1147,6 +1149,7 @@ fun MetaDetailsScreen(
                                     )
                                 }
                             }
+                            CompositionLocalProvider(LocalOverscrollFactory provides null) {
                             LazyColumn(
                                 state = listState,
                                 modifier = Modifier
@@ -1308,6 +1311,7 @@ fun MetaDetailsScreen(
                                 item(key = "detail-bottom-spacer") {
                                     Spacer(modifier = Modifier.height(nuvioSafeBottomPadding(32.dp)))
                                 }
+                            }
                             }
 
                             if (!useTabletLayout && backgroundMode.usesBackdropBackground && deferredMetaWorkAllowed && heroHeightPx.intValue > 0) {
