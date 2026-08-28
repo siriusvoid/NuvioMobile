@@ -114,6 +114,7 @@ internal fun LazyListScope.playbackSettingsContent(
     tunnelingEnabled: Boolean,
     useLibass: Boolean,
     libassRenderType: String,
+    onImportedSubtitlesClick: () -> Unit,
 ) {
     item {
         PlaybackSettingsSection(
@@ -137,6 +138,7 @@ internal fun LazyListScope.playbackSettingsContent(
             tunnelingEnabled = tunnelingEnabled,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
+            onImportedSubtitlesClick = onImportedSubtitlesClick,
         )
     }
 }
@@ -290,6 +292,7 @@ private fun PlaybackSettingsSection(
     tunnelingEnabled: Boolean,
     useLibass: Boolean,
     libassRenderType: String,
+    onImportedSubtitlesClick: () -> Unit,
 ) {
     var showPreferredAudioDialog by remember { mutableStateOf(false) }
     var showSecondaryAudioDialog by remember { mutableStateOf(false) }
@@ -496,6 +499,13 @@ private fun PlaybackSettingsSection(
                     enabled = subtitleLanguageEnabled,
                     isTablet = isTablet,
                     onClick = { showSecondarySubtitleDialog = true },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.compose_settings_page_imported_subtitles),
+                    description = stringResource(Res.string.settings_playback_imported_subtitles_description),
+                    isTablet = isTablet,
+                    onClick = onImportedSubtitlesClick,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(

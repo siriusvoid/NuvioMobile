@@ -32,6 +32,8 @@ data class AddonSubtitle(
     val display: String,
     val addonName: String? = null,
     val isSelected: Boolean = false,
+    /** Served off this device — an imported file rather than a url to fetch. */
+    val isLocalFile: Boolean = false,
 )
 
 const val SUBTITLE_DELAY_MIN_MS = -60_000

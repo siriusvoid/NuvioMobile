@@ -2,6 +2,8 @@ package com.nuvio.app.features.addons
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.network.SupabaseProvider
+import com.nuvio.app.features.subtitles.ImportedSubtitleAddonService
+import com.nuvio.app.features.subtitles.ImportedSubtitleRepository
 import com.nuvio.app.features.webdav.WebDavAddonService
 import com.nuvio.app.features.webdav.WebDavLibraryRepository
 import com.nuvio.app.core.sync.putSyncOriginClientId
@@ -71,6 +73,7 @@ object AddonRepository {
         log.d { "initialize() — loading local addons for profile $currentProfileId" }
 
         WebDavLibraryRepository.initialize()
+        ImportedSubtitleRepository.ensureLoaded()
 
         val storedUrls = dedupeManifestUrls(AddonStorage.loadInstalledAddonUrls(currentProfileId))
         val enabledByUrl = loadLocalEnabledStates()
@@ -283,6 +286,7 @@ object AddonRepository {
     fun removeAddon(manifestUrl: String) {
         if (isUsingPrimaryAddonsFromSecondaryProfile()) return
         if (manifestUrl.startsWith(WebDavAddonService.SCHEME)) return
+        if (manifestUrl.startsWith(ImportedSubtitleAddonService.SCHEME)) return
         log.i { "removeAddon() — $manifestUrl" }
         var changed = false
         _uiState.update { current ->
@@ -419,25 +423,41 @@ object AddonRepository {
         syncWebDavAddon()
     }
 
+    fun syncWebDavAddon() = syncVirtualAddons()
+
     /**
-     * Rebuilds the generated WebDAV addon from the current sources. Called whenever
-     * the library changes, so catalogue rows follow the index without a restart.
+     * Rebuilds the generated addons from what they serve: the WebDAV sources and
+     * the imported subtitle packs. Called whenever either changes, so catalogue
+     * rows and the subtitle menu follow the index without a restart. Each is
+     * injected only while it has something to answer with, so an unused feature
+     * never shows up in the addon list.
      */
-    fun syncWebDavAddon() {
+    fun syncVirtualAddons() {
         val sources = WebDavLibraryRepository.uiState.value.sources.filter { it.enabled }
+        val hasImportedSubtitles = ImportedSubtitleRepository.hasPacks()
         _uiState.update { current ->
             val installed = current.addons.filterNot { it.isVirtual }
-            if (sources.isEmpty()) {
-                current.copy(addons = installed)
-            } else {
-                current.copy(
-                    addons = installed + ManagedAddon(
-                        manifestUrl = WebDavAddonService.MANIFEST_URL,
-                        manifest = WebDavAddonService.manifest(sources),
-                        enabled = true,
-                    ),
-                )
+            val generated = buildList {
+                if (sources.isNotEmpty()) {
+                    add(
+                        ManagedAddon(
+                            manifestUrl = WebDavAddonService.MANIFEST_URL,
+                            manifest = WebDavAddonService.manifest(sources),
+                            enabled = true,
+                        ),
+                    )
+                }
+                if (hasImportedSubtitles) {
+                    add(
+                        ManagedAddon(
+                            manifestUrl = ImportedSubtitleAddonService.MANIFEST_URL,
+                            manifest = ImportedSubtitleAddonService.manifest(),
+                            enabled = true,
+                        ),
+                    )
+                }
             }
+            current.copy(addons = installed + generated)
         }
     }
 

@@ -105,9 +105,13 @@ object SubtitleRepository {
                                         display = getString(
                                             Res.string.player_addon_subtitle_display_format,
                                             getLanguageLabelForCode(rawLang),
-                                            addon.displayTitle,
+                                            // A subtitle that names itself says something the
+                                            // addon's own name cannot, such as which fansub
+                                            // group's translation this is.
+                                            obj.subtitleName() ?: addon.displayTitle,
                                         ),
                                         addonName = addon.displayTitle,
+                                        isLocalFile = !url.startsWith("http", ignoreCase = true),
                                     )
                                 )
                             }
@@ -122,6 +126,13 @@ object SubtitleRepository {
                         }
                     }
                 }.awaitAll()
+            }
+
+            // Imported files come first so that when they share a language with an
+            // addon's subtitles, the automatic preferred-language pick lands on the
+            // copy the user chose to keep on the device.
+            _addonSubtitles.update { subtitles ->
+                subtitles.sortedBy { if (it.isLocalFile) 0 else 1 }
             }
 
             if (_addonSubtitles.value.isEmpty()) {
@@ -151,6 +162,9 @@ private fun AddonResource.supportsSubtitleType(type: String, videoId: String): B
     if (!typeMatches) return false
     return idPrefixes.isEmpty() || idPrefixes.any { prefix -> videoId.startsWith(prefix) }
 }
+
+private fun JsonObject.subtitleName(): String? =
+    stringValue("name") ?: stringValue("title")
 
 private fun JsonObject.subtitleLanguage(): String? =
     stringValue("lang")

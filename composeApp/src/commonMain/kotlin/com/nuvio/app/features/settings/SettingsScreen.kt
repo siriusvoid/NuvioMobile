@@ -771,6 +771,10 @@ private fun MobileSettingsScreen(
                     tunnelingEnabled = tunnelingEnabled,
                     useLibass = useLibass,
                     libassRenderType = libassRenderType,
+                    onImportedSubtitlesClick = { onPageChange(SettingsPage.ImportedSubtitles) },
+                )
+                SettingsPage.ImportedSubtitles -> importedSubtitlesContent(
+                    isTablet = false,
                 )
                 SettingsPage.Streams -> streamsSettingsContent(
                     isTablet = false,
@@ -1217,6 +1221,10 @@ private fun TabletSettingsScreen(
                         tunnelingEnabled = tunnelingEnabled,
                         useLibass = useLibass,
                         libassRenderType = libassRenderType,
+                        onImportedSubtitlesClick = { onPageChange(SettingsPage.ImportedSubtitles) },
+                    )
+                    SettingsPage.ImportedSubtitles -> importedSubtitlesContent(
+                        isTablet = true,
                     )
                     SettingsPage.Streams -> streamsSettingsContent(
                         isTablet = true,
