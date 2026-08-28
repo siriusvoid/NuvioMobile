@@ -16,6 +16,8 @@ import nuvio.composeapp.generated.resources.compose_settings_page_advanced
 import nuvio.composeapp.generated.resources.compose_settings_page_appearance
 import nuvio.composeapp.generated.resources.compose_settings_page_content_discovery
 import nuvio.composeapp.generated.resources.compose_settings_page_debrid
+import nuvio.composeapp.generated.resources.compose_settings_page_webdav_library
+import nuvio.composeapp.generated.resources.compose_settings_page_webdav_review
 import nuvio.composeapp.generated.resources.compose_settings_page_continue_watching
 import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
 import nuvio.composeapp.generated.resources.compose_settings_page_integrations
@@ -139,6 +141,16 @@ internal enum class SettingsPage(
         titleRes = Res.string.compose_settings_page_tmdb_enrichment,
         category = SettingsCategory.General,
         parentPage = Integrations,
+    ),
+    WebDavLibrary(
+        titleRes = Res.string.compose_settings_page_webdav_library,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    WebDavReview(
+        titleRes = Res.string.compose_settings_page_webdav_review,
+        category = SettingsCategory.General,
+        parentPage = WebDavLibrary,
     ),
     MdbListRatings(
         titleRes = Res.string.compose_settings_page_mdblist_ratings,

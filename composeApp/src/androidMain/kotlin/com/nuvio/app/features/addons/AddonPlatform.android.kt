@@ -276,7 +276,12 @@ actual suspend fun httpRequestRaw(
             builder.header(key, value)
         }
 
-        val request = if (requestAllowsBody(normalizedMethod)) {
+        // WebDAV verbs (PROPFIND) carry an XML body, so a non-empty body is sent for
+        // any method except the two that can never take one.
+        val sendsBody = requestAllowsBody(normalizedMethod) ||
+            (body.isNotEmpty() && normalizedMethod != "GET" && normalizedMethod != "HEAD")
+
+        val request = if (sendsBody) {
             val contentType = sanitizedHeaders.getHeaderIgnoreCase("Content-Type")
                 ?: if (normalizedMethod == "POST") "application/x-www-form-urlencoded" else "application/json"
             val requestBody = body.toByteArray(Charsets.UTF_8).toRequestBody(contentType.toMediaType())

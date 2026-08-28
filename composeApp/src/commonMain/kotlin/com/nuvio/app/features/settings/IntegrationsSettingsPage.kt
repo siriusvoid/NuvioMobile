@@ -9,6 +9,8 @@ import nuvio.composeapp.generated.resources.settings_integrations_mdblist_descri
 import nuvio.composeapp.generated.resources.settings_integrations_debrid_description
 import nuvio.composeapp.generated.resources.settings_integrations_section_title
 import nuvio.composeapp.generated.resources.settings_integrations_tmdb_description
+import nuvio.composeapp.generated.resources.compose_settings_page_webdav_library
+import nuvio.composeapp.generated.resources.settings_integrations_webdav_description
 import org.jetbrains.compose.resources.stringResource
 
 internal fun LazyListScope.integrationsContent(
@@ -16,6 +18,7 @@ internal fun LazyListScope.integrationsContent(
     onTmdbClick: () -> Unit,
     onMdbListClick: () -> Unit,
     onDebridClick: () -> Unit,
+    onWebDavClick: () -> Unit,
 ) {
     item {
         SettingsSection(
@@ -44,6 +47,13 @@ internal fun LazyListScope.integrationsContent(
                     description = stringResource(Res.string.settings_integrations_debrid_description),
                     isTablet = isTablet,
                     onClick = onDebridClick,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.compose_settings_page_webdav_library),
+                    description = stringResource(Res.string.settings_integrations_webdav_description),
+                    isTablet = isTablet,
+                    onClick = onWebDavClick,
                 )
             }
         }
