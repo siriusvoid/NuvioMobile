@@ -20,6 +20,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_webdav_library
 import nuvio.composeapp.generated.resources.compose_settings_page_webdav_review
 import nuvio.composeapp.generated.resources.compose_settings_page_continue_watching
 import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
+import nuvio.composeapp.generated.resources.compose_settings_page_imported_subtitles
 import nuvio.composeapp.generated.resources.compose_settings_page_integrations
 import nuvio.composeapp.generated.resources.compose_settings_page_licenses_attributions
 import nuvio.composeapp.generated.resources.compose_settings_page_mdblist_ratings
@@ -151,6 +152,11 @@ internal enum class SettingsPage(
         titleRes = Res.string.compose_settings_page_webdav_review,
         category = SettingsCategory.General,
         parentPage = WebDavLibrary,
+    ),
+    ImportedSubtitles(
+        titleRes = Res.string.compose_settings_page_imported_subtitles,
+        category = SettingsCategory.General,
+        parentPage = Playback,
     ),
     MdbListRatings(
         titleRes = Res.string.compose_settings_page_mdblist_ratings,

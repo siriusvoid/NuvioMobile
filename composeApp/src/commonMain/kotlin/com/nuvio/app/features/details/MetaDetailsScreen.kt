@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAddCheckCircle
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
@@ -85,6 +86,8 @@ import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterZoomActionOverlay
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.subtitles.ImportedSubtitleRepository
+import com.nuvio.app.features.subtitles.rememberSubtitleFilePicker
 import com.nuvio.app.core.ui.PosterZoomAnchor
 import com.nuvio.app.core.ui.PosterZoomAnchorHolder
 import com.nuvio.app.core.ui.PosterZoomOverlayAction
@@ -104,6 +107,7 @@ import com.nuvio.app.features.details.components.DetailHero
 import com.nuvio.app.features.details.components.DetailMetaInfo
 import com.nuvio.app.features.details.components.DetailPosterRailSection
 import com.nuvio.app.features.details.components.DetailProductionSection
+import com.nuvio.app.features.details.components.DetailSecondaryAction
 import com.nuvio.app.features.details.components.DetailSeriesContent
 import com.nuvio.app.features.details.components.DetailSeriesListEpisode
 import com.nuvio.app.features.details.components.DetailSeriesListHeader
@@ -159,8 +163,10 @@ import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.watching.application.WatchingState
 import com.kmpalette.rememberDominantColorState
 import com.kmpalette.extensions.painter.rememberPainterDominantColorState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -1172,6 +1178,7 @@ fun MetaDetailsScreen(
                                             onHeightChanged = { heroHeightPx.intValue = it },
                                             actions = if (isSectionEnabled(MetaScreenSectionKey.ACTIONS)) {
                                                 {
+                                                    val subtitleImportActions = rememberSubtitleImportActions(meta)
                                                     DetailActions(
                                                         playLabel = playButtonLabel,
                                                         playEnabled = isPrimaryPlayEnabled,
@@ -1185,6 +1192,7 @@ fun MetaDetailsScreen(
                                                         onWatchedClick = toggleWatched,
                                                         onSaveClick = toggleSaved,
                                                         onSaveLongClick = openLibraryListPicker,
+                                                        extraActions = subtitleImportActions,
                                                     )
                                                 }
                                             } else {
@@ -2222,6 +2230,38 @@ private fun metaSectionHasContent(
     }
 
 @Composable
+private fun rememberSubtitleImportActions(meta: MetaDetails): List<DetailSecondaryAction> {
+    val subtitleImportScope = rememberCoroutineScope()
+    val importedSubtitlesState by remember {
+        ImportedSubtitleRepository.ensureLoaded()
+        ImportedSubtitleRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val hasImportedSubtitles = importedSubtitlesState.packs.any { it.metaId == meta.id }
+    val subtitleImporter = rememberSubtitleFilePicker { picked ->
+        subtitleImportScope.launch {
+            val imported = withContext(Dispatchers.Default) {
+                ImportedSubtitleRepository.import(meta, picked)
+            }
+            // A successful import lights the action up and fills the subtitle menu,
+            // so announcing it as well would only be noise. Picking something with no
+            // subtitle file in it has nothing to show for itself, and does say so.
+            if (imported == 0 && picked.isNotEmpty()) {
+                NuvioToastController.show(getString(Res.string.details_subtitles_import_empty))
+            }
+        }
+    }
+    if (!subtitleImporter.isSupported) return emptyList()
+    return listOf(
+        DetailSecondaryAction(
+            label = stringResource(Res.string.details_subtitles_import),
+            icon = Icons.Default.Subtitles,
+            isActive = hasImportedSubtitles,
+            onClick = subtitleImporter::launch,
+        ),
+    )
+}
+
+@Composable
 @OptIn(ExperimentalSharedTransitionApi::class)
 private fun ConfiguredMetaSections(
     settings: MetaScreenSettingsUiState,
@@ -2276,6 +2316,8 @@ private fun ConfiguredMetaSections(
 ) {
     val enabledItems = settings.items.filter { it.enabled }
 
+    val subtitleImportActions = rememberSubtitleImportActions(meta)
+
     // Helper to check if a section actually has content to show
     val sectionHasContent: (MetaScreenSectionKey) -> Boolean = { key ->
         when (key) {
@@ -2301,6 +2343,7 @@ private fun ConfiguredMetaSections(
                     playEnabled = isPrimaryPlayEnabled,
                     isSaved = isSaved,
                     isWatched = isWatched,
+                    extraActions = subtitleImportActions,
                     isTablet = isTablet,
                     shuffleEnabled = shuffleEnabled,
                     onPlayClick = onPrimaryPlayClick,

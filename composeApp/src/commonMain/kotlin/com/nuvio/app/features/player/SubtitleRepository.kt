@@ -52,6 +52,13 @@ object SubtitleRepository {
                 }
             }
 
+            // Imported files come first so that when they share a language with an
+            // addon's subtitles, the automatic preferred-language pick lands on the
+            // copy the user chose to keep on the device.
+            _addonSubtitles.update { subtitles ->
+                subtitles.sortedBy { if (it.isLocalFile) 0 else 1 }
+            }
+
             if (_addonSubtitles.value.isEmpty()) {
                 _error.value = getString(Res.string.compose_player_no_subtitles_found)
             }

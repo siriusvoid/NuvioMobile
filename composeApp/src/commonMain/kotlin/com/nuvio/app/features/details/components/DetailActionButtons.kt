@@ -256,6 +256,7 @@ fun DetailActions(
     onWatchedClick: () -> Unit,
     onSaveClick: () -> Unit,
     onSaveLongClick: (() -> Unit)?,
+    extraActions: List<DetailSecondaryAction> = emptyList(),
 ) {
     val shuffleAction = onShuffleClick?.let { onClick ->
         DetailSecondaryAction(
@@ -288,6 +289,7 @@ fun DetailActions(
                     onLongClick = onSaveLongClick,
                 ),
             )
+            addAll(extraActions)
         },
         isTablet = isTablet,
         onPlayClick = onPlayClick,
