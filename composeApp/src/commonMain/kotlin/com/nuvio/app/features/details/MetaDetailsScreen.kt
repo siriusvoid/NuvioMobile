@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAddCheckCircle
+import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
@@ -84,6 +85,8 @@ import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterZoomActionOverlay
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.subtitles.ImportedSubtitleRepository
+import com.nuvio.app.features.subtitles.rememberSubtitleFilePicker
 import com.nuvio.app.core.ui.PosterZoomAnchor
 import com.nuvio.app.core.ui.PosterZoomAnchorHolder
 import com.nuvio.app.core.ui.PosterZoomOverlayAction
@@ -147,8 +150,10 @@ import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.watching.application.WatchingState
 import com.kmpalette.rememberDominantColorState
 import com.kmpalette.extensions.painter.rememberPainterDominantColorState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
@@ -2094,6 +2099,26 @@ private fun ConfiguredMetaSections(
 ) {
     val enabledItems = settings.items.filter { it.enabled }
 
+    val subtitleImportScope = rememberCoroutineScope()
+    val importedSubtitlesState by remember {
+        ImportedSubtitleRepository.ensureLoaded()
+        ImportedSubtitleRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val hasImportedSubtitles = importedSubtitlesState.packs.any { it.metaId == meta.id }
+    val subtitleImporter = rememberSubtitleFilePicker { picked ->
+        subtitleImportScope.launch {
+            val imported = withContext(Dispatchers.Default) {
+                ImportedSubtitleRepository.import(meta, picked)
+            }
+            // A successful import lights the action up and fills the subtitle menu,
+            // so announcing it as well would only be noise. Picking something with no
+            // subtitle file in it has nothing to show for itself, and does say so.
+            if (imported == 0 && picked.isNotEmpty()) {
+                NuvioToastController.show(getString(Res.string.details_subtitles_import_empty))
+            }
+        }
+    }
+
     // Helper to check if a section actually has content to show
     val sectionHasContent: (MetaScreenSectionKey) -> Boolean = { key ->
         when (key) {
@@ -2146,6 +2171,14 @@ private fun ConfiguredMetaSections(
                             onClick = onSaveClick,
                             onLongClick = onSaveLongClick,
                         ))
+                        if (subtitleImporter.isSupported) {
+                            add(DetailSecondaryAction(
+                                label = stringResource(Res.string.details_subtitles_import),
+                                icon = Icons.Default.Subtitles,
+                                isActive = hasImportedSubtitles,
+                                onClick = subtitleImporter::launch,
+                            ))
+                        }
                     },
                     isTablet = isTablet,
                     onPlayClick = onPrimaryPlayClick,
