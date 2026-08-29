@@ -11,6 +11,8 @@ import kotlinx.coroutines.sync.withPermit
 
 internal data class WebDavScanResult(
     val folders: List<WebDavFolder>,
+    /** Every folder the root listing returned, window or not. Absence marks a deletion candidate. */
+    val presentPaths: Set<String>,
     val totalFolderCount: Int,
     val reusedFolderCount: Int,
     val windowStart: Int,
@@ -51,6 +53,11 @@ internal class WebDavScanner(
             .filter { it.isCollection }
             .sortedByDescending { it.lastModifiedEpochSeconds ?: Long.MIN_VALUE }
 
+        val presentPaths = folderEntries
+            .map { it.decodedPathRelativeTo(prefix) }
+            .filter { it.isNotBlank() }
+            .toSet()
+
         val window = folderEntries
             .drop(windowStart)
             .take(source.windowSize.coerceAtLeast(1))
@@ -59,6 +66,7 @@ internal class WebDavScanner(
             return Result.success(
                 WebDavScanResult(
                     folders = emptyList(),
+                    presentPaths = presentPaths,
                     totalFolderCount = folderEntries.size,
                     reusedFolderCount = 0,
                     windowStart = windowStart,
@@ -106,12 +114,37 @@ internal class WebDavScanner(
         return Result.success(
             WebDavScanResult(
                 folders = folders.filter { it.files.isNotEmpty() },
+                presentPaths = presentPaths,
                 totalFolderCount = folderEntries.size,
                 reusedFolderCount = tally.reusedFolders(),
                 windowStart = windowStart,
                 windowEnd = windowStart + window.size,
             ),
         )
+    }
+
+    /**
+     * Asks the server about folders the root listing did not mention and returns
+     * the ones it confirms are empty.
+     *
+     * Real-Debrid drops entries from long listings, so absence is only ever a reason
+     * to ask. Both signals have to agree — missing from the listing *and* holding
+     * nothing — and anything else leaves the folder to be asked about again.
+     */
+    suspend fun confirmDeleted(paths: Collection<String>): Set<String> {
+        if (paths.isEmpty()) return emptySet()
+
+        val gate = Semaphore(MAX_CONCURRENT_LISTINGS)
+        return coroutineScope {
+            paths.map { path ->
+                async {
+                    val existence = gate.withPermit {
+                        client.folderContents(pathUnderRoot(path))
+                    }
+                    path.takeIf { existence == WebDavExistence.Gone }
+                }
+            }.awaitAll()
+        }.filterNotNull().toSet()
     }
 
     /** Progress counters shared by the two concurrent listing coroutines. */

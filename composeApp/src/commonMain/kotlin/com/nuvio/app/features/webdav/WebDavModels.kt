@@ -54,11 +54,31 @@ data class WebDavSource(
     val windowSize: Int = DEFAULT_WINDOW_SIZE,
     val enabled: Boolean = true,
     val lastScanAt: Long? = null,
+    /**
+     * How many folders the previous root listing returned. A listing that comes
+     * back far shorter than this one is treated as truncated rather than as a
+     * mass deletion.
+     */
+    val lastListingCount: Int? = null,
 ) {
     val provider: WebDavProvider get() = WebDavProvider.fromId(providerId)
 
+    /**
+     * Whether coming back to the app should rescan this source. The gap only exists
+     * to stop app-switching from rescanning every few seconds; there is no clock
+     * behind it, so a source is never scanned while you are not using the app.
+     */
+    fun isScanDue(nowMillis: Long): Boolean {
+        if (!enabled) return false
+        val last = lastScanAt ?: return true
+        return nowMillis - last >= FOREGROUND_SCAN_GAP_MS
+    }
+
     companion object {
         const val DEFAULT_WINDOW_SIZE = 50
+
+        /** Minimum time between two foreground-triggered scans of one source. */
+        const val FOREGROUND_SCAN_GAP_MS = 30 * 60 * 1000L
     }
 }
 
