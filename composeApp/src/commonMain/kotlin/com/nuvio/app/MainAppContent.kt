@@ -172,6 +172,7 @@ import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import com.nuvio.app.features.watchprogress.continueWatchingItemKey
 import com.nuvio.app.features.watchprogress.nextUpDismissKey
 import com.nuvio.app.features.watchprogress.toContinueWatchingItem
+import com.nuvio.app.features.webdav.WebDavLibraryRepository
 import com.nuvio.app.navigation.*
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
@@ -654,6 +655,7 @@ internal fun MainAppContent(
                         } else {
                             SyncManager.stopPeriodicNuvioSyncPull()
                         }
+                        WebDavLibraryRepository.scanOnLaunch()
                     }
                     AppVisibility.Background -> SyncManager.stopPeriodicNuvioSyncPull()
                 }

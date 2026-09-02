@@ -54,6 +54,12 @@ data class WebDavSource(
     val windowSize: Int = DEFAULT_WINDOW_SIZE,
     val enabled: Boolean = true,
     val lastScanAt: Long? = null,
+    /**
+     * How many folders the previous root listing returned. A listing that comes
+     * back far shorter than this one is treated as truncated rather than as a
+     * mass deletion.
+     */
+    val lastListingCount: Int? = null,
 ) {
     val provider: WebDavProvider get() = WebDavProvider.fromId(providerId)
 

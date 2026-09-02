@@ -8,6 +8,9 @@ import com.nuvio.app.features.addons.httpRequestRaw
  * No new networking layer: [httpRequestRaw] already takes an arbitrary method,
  * headers and a body on both platforms.
  */
+/** What a direct check said about a folder the listing did not mention. */
+internal enum class WebDavExistence { Present, Gone, Unknown }
+
 internal class WebDavClient(
     private val baseUrl: String,
     private val username: String,
@@ -89,6 +92,48 @@ internal class WebDavClient(
         )
     }
 
+    /**
+     * Whether one folder still holds anything on the server.
+     *
+     * Real-Debrid does not 404 a deleted torrent — it answers 207 with a synthetic
+     * directory entry — so status cannot tell deleted from live. Contents can: a
+     * deleted folder lists no children. Hence Depth 1 and a child count.
+     *
+     * Anything inconclusive is [WebDavExistence.Unknown] and keeps the folder.
+     * Reading a timeout or a 5xx as deletion would turn an outage into a wiped
+     * library.
+     */
+    suspend fun folderContents(path: String): WebDavExistence {
+        val url = WebDavUrl.buildUrl(baseUrl, path)
+        val response = runCatching {
+            httpRequestRaw(
+                method = "PROPFIND",
+                url = url,
+                headers = buildMap {
+                    authHeader?.let { put("Authorization", it) }
+                    put("Depth", "1")
+                    put("Content-Type", "application/xml; charset=utf-8")
+                    put("Accept", "application/xml, text/xml")
+                },
+                body = PROPFIND_BODY,
+                // A dead path redirecting to something live would read as present.
+                followRedirects = false,
+                maxResponseBodyBytes = MAX_EXISTENCE_BYTES,
+            )
+        }.getOrElse { return WebDavExistence.Unknown }
+
+        if (response.status == 404) return WebDavExistence.Gone
+        if (response.status !in 200..299) return WebDavExistence.Unknown
+
+        val self = WebDavUrl.decode(path).trim('/')
+        val children = runCatching {
+            WebDavXml.parseMultistatus(response.body)
+                .count { it.decodedPathRelativeTo("").trim('/') != self }
+        }.getOrElse { return WebDavExistence.Unknown }
+
+        return if (children == 0) WebDavExistence.Gone else WebDavExistence.Present
+    }
+
     /** True when the server answers a byte range, which is what makes seeking work. */
     suspend fun supportsRangeRequests(url: String): Boolean {
         val response = runCatching {
@@ -155,6 +200,8 @@ internal class WebDavClient(
 
     private companion object {
         const val MAX_LISTING_BYTES = 16 * 1024 * 1024
+        // A live folder answers with all its files, so this has to fit a real listing.
+        const val MAX_EXISTENCE_BYTES = 1024 * 1024
 
         val PROPFIND_BODY = """
             <?xml version="1.0" encoding="utf-8"?>

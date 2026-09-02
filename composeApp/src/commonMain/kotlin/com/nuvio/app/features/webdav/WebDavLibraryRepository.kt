@@ -43,6 +43,15 @@ object WebDavLibraryRepository {
 
     private val scanJobs = mutableMapOf<String, Job>()
     private var initialized = false
+    private var launchScanStarted = false
+
+    /**
+     * Bumped whenever the catalogue's contents change, and carried in the virtual
+     * addon's manifest version. Without it the manifest is byte-identical after a
+     * scan and the home screen's refresh signature never fires.
+     */
+    var catalogRevision: Int = 0
+        private set
 
     fun initialize() {
         if (initialized) return
@@ -104,7 +113,7 @@ object WebDavLibraryRepository {
         WebDavStorage.savePassword(source.id, trimmedPassword)
         val updated = _uiState.value.sources + source
         persistSources(updated)
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
         scan(source.id)
         return Result.success(source)
     }
@@ -117,7 +126,7 @@ object WebDavLibraryRepository {
         scope.launch {
             WebDavIndex.deleteSource(sourceId)
             refreshCounts()
-            AddonRepository.syncWebDavAddon()
+            publishCatalogChange()
         }
     }
 
@@ -126,7 +135,7 @@ object WebDavLibraryRepository {
             if (it.id == sourceId) it.copy(enabled = enabled) else it
         }
         persistSources(updated)
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
     }
 
     fun setWindowSize(sourceId: String, windowSize: Int) {
@@ -173,7 +182,8 @@ object WebDavLibraryRepository {
 
             result.fold(
                 onSuccess = { scan ->
-                    WebDavIndex.mergeFolders(sourceId, scan.folders)
+                    val deleted = confirmDeletions(source, scanner, scan)
+                    WebDavIndex.mergeFolders(sourceId, scan.folders, deleted)
                     publishProgress(sourceId) {
                         it.copy(
                             phase = ScanPhase.Matching,
@@ -181,10 +191,10 @@ object WebDavLibraryRepository {
                         )
                     }
                     matchFolders(source, scan.folders)
-                    markScanned(sourceId)
+                    markScanned(sourceId, scan.presentPaths.size)
                     publishProgress(sourceId) { it.copy(phase = ScanPhase.Done) }
                     refreshCounts()
-                    AddonRepository.syncWebDavAddon()
+                    publishCatalogChange()
                 },
                 onFailure = { error ->
                     log.w(error) { "Scan failed for $sourceId" }
@@ -197,6 +207,48 @@ object WebDavLibraryRepository {
                 },
             )
         }
+    }
+
+    /**
+     * Which indexed folders the server confirms are gone.
+     *
+     * Both guards below target the same failure — a listing that came back short —
+     * and skip the prune outright rather than delete on the strength of bad data.
+     */
+    private suspend fun confirmDeletions(
+        source: WebDavSource,
+        scanner: WebDavScanner,
+        scan: WebDavScanResult,
+    ): Set<String> {
+        if (scan.presentPaths.isEmpty()) return emptySet()
+
+        val previousCount = source.lastListingCount
+        if (previousCount != null && scan.presentPaths.size < previousCount * LISTING_SHRINK_FLOOR) {
+            return emptySet()
+        }
+
+        val missing = WebDavIndex.folders(source.id)
+            .map { it.path }
+            .filterNot { it in scan.presentPaths }
+        if (missing.isEmpty()) return emptySet()
+
+        if (missing.size > MAX_DELETION_CHECKS) return emptySet()
+
+        return scanner.confirmDeleted(missing)
+    }
+
+    /**
+     * Rescans every enabled source, once per launch. Safe to call on every
+     * foreground: only the first call in the process does anything. Everything after
+     * that is the Scan now button.
+     */
+    fun scanOnLaunch() {
+        initialize()
+        if (launchScanStarted) return
+        launchScanStarted = true
+        _uiState.value.sources
+            .filter { it.enabled }
+            .forEach { source -> scan(source.id) }
     }
 
     /**
@@ -485,7 +537,7 @@ object WebDavLibraryRepository {
         )
         WebDavIndex.putMatch(match)
         refreshCounts()
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
         return Result.success(match)
     }
 
@@ -493,7 +545,7 @@ object WebDavLibraryRepository {
         val current = WebDavIndex.match(folderKey) ?: return
         WebDavIndex.putMatch(current.copy(excluded = excluded, userSet = true))
         refreshCounts()
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
     }
 
     suspend fun rematch(folderKey: String) {
@@ -504,10 +556,15 @@ object WebDavLibraryRepository {
         val match = runCatching { resolveFolder(source, folder) }.getOrNull()
         if (match != null) WebDavIndex.putMatch(match)
         refreshCounts()
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
     }
 
     // ------------------------------------------------------------------ state
+
+    private fun publishCatalogChange() {
+        catalogRevision++
+        AddonRepository.syncWebDavAddon()
+    }
 
     private fun loadSources(): List<WebDavSource> {
         val payload = WebDavStorage.loadSources()
@@ -526,10 +583,10 @@ object WebDavLibraryRepository {
             .onFailure { log.w(it) { "Could not persist WebDAV sources" } }
     }
 
-    private fun markScanned(sourceId: String) {
+    private fun markScanned(sourceId: String, listingCount: Int) {
         val updated = _uiState.value.sources.map { source ->
             if (source.id == sourceId) {
-                source.copy(lastScanAt = GMTDate().timestamp)
+                source.copy(lastScanAt = GMTDate().timestamp, lastListingCount = listingCount)
             } else {
                 source
             }
@@ -573,4 +630,10 @@ object WebDavLibraryRepository {
 
     private const val MIN_CONFIDENCE = 0.55f
     private const val META_TIMEOUT_MS = 8_000L
+
+    /** A listing shorter than this fraction of the last one is treated as truncated. */
+    private const val LISTING_SHRINK_FLOOR = 0.8
+
+    /** Upper bound on the folders one scan may question, so a bad listing cannot storm. */
+    private const val MAX_DELETION_CHECKS = 20
 }
