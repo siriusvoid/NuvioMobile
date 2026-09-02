@@ -43,9 +43,11 @@ internal fun parseVideoId(raw: String): VideoIdParts {
  * The scanned folders and their resolved matches.
  *
  * The window refreshes but the index accumulates: folders stay after they drop
- * out of the newest 50, and a folder missing from a listing counts as "not seen
- * this pass" rather than "deleted" — which also absorbs Real-Debrid's habit of
- * intermittently omitting entries from a large listing.
+ * out of the newest 50, so the library is not limited to what one scan can reach.
+ *
+ * Nothing here infers a deletion: a folder leaves only when the scanner has
+ * confirmed it with the server, so a listing that quietly omits entries can never
+ * remove anything.
  */
 internal object WebDavIndex {
     private val log = Logger.withTag("WebDavIndex")
@@ -65,17 +67,37 @@ internal object WebDavIndex {
         foldersBySource.values.flatten()
     }
 
-    /** Merges a scan window into the accumulated index, keeping unseen folders. */
-    suspend fun mergeFolders(sourceId: String, scanned: List<WebDavFolder>) {
+    /**
+     * Merges a scan window into the accumulated index.
+     *
+     * [deletedPaths] are folders the server has confirmed are gone; their matches go
+     * with them. Everything else is kept, whether or not this scan saw it.
+     */
+    suspend fun mergeFolders(
+        sourceId: String,
+        scanned: List<WebDavFolder>,
+        deletedPaths: Set<String> = emptySet(),
+    ) {
         mutex.withLock {
+            loadMatchesLocked()
             val existing = loadFoldersLocked(sourceId)
             val byPath = LinkedHashMap<String, WebDavFolder>(existing.size + scanned.size)
-            existing.forEach { byPath[it.path] = it }
+            val dropped = ArrayList<String>()
+
+            existing.forEach { folder ->
+                if (folder.path in deletedPaths) dropped.add(folder.key) else byPath[folder.path] = folder
+            }
             scanned.forEach { byPath[it.path] = it }
+
             val merged = byPath.values.toList()
             foldersBySource[sourceId] = merged
             reverseIndex = null
             persistFoldersLocked(sourceId, merged)
+
+            if (dropped.isNotEmpty()) {
+                dropped.forEach(matchesByKey::remove)
+                persistMatchesLocked()
+            }
         }
     }
 
