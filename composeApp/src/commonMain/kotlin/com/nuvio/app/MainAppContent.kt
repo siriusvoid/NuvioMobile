@@ -599,7 +599,7 @@ internal fun MainAppContent(
                         } else {
                             SyncManager.stopPeriodicNuvioSyncPull()
                         }
-                        WebDavLibraryRepository.onEnterForeground()
+                        WebDavLibraryRepository.scanOnLaunch()
                     }
                     AppVisibility.Background -> SyncManager.stopPeriodicNuvioSyncPull()
                 }

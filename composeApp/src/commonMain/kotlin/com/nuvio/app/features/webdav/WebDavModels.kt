@@ -63,22 +63,8 @@ data class WebDavSource(
 ) {
     val provider: WebDavProvider get() = WebDavProvider.fromId(providerId)
 
-    /**
-     * Whether coming back to the app should rescan this source. The gap only exists
-     * to stop app-switching from rescanning every few seconds; there is no clock
-     * behind it, so a source is never scanned while you are not using the app.
-     */
-    fun isScanDue(nowMillis: Long): Boolean {
-        if (!enabled) return false
-        val last = lastScanAt ?: return true
-        return nowMillis - last >= FOREGROUND_SCAN_GAP_MS
-    }
-
     companion object {
         const val DEFAULT_WINDOW_SIZE = 50
-
-        /** Minimum time between two foreground-triggered scans of one source. */
-        const val FOREGROUND_SCAN_GAP_MS = 30 * 60 * 1000L
     }
 }
 

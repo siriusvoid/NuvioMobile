@@ -43,6 +43,7 @@ object WebDavLibraryRepository {
 
     private val scanJobs = mutableMapOf<String, Job>()
     private var initialized = false
+    private var launchScanStarted = false
 
     /**
      * Bumped whenever the catalogue's contents change, and carried in the virtual
@@ -236,23 +237,17 @@ object WebDavLibraryRepository {
         return scanner.confirmDeleted(missing)
     }
 
-    // -------------------------------------------------------------- auto scan
-
     /**
-     * Rescans every source that is due, called when the app comes to the foreground.
-     *
-     * There is no timer behind this. iOS hands a media app no dependable background
-     * window — a `BGAppRefreshTask` fires when the system feels like it — and a share
-     * that only matters while you are browsing it does not need one: catching up the
-     * moment you come back to the app is both cheaper and fresher. A scan that failed
-     * leaves [WebDavSource.lastScanAt] alone, so the next foreground simply tries
-     * again instead of a retry loop running behind your back.
+     * Rescans every enabled source, once per launch. Safe to call on every
+     * foreground: only the first call in the process does anything. Everything after
+     * that is the Scan now button.
      */
-    fun onEnterForeground() {
+    fun scanOnLaunch() {
         initialize()
-        val now = GMTDate().timestamp
+        if (launchScanStarted) return
+        launchScanStarted = true
         _uiState.value.sources
-            .filter { it.isScanDue(now) }
+            .filter { it.enabled }
             .forEach { source -> scan(source.id) }
     }
 
