@@ -44,6 +44,14 @@ object WebDavLibraryRepository {
     private val scanJobs = mutableMapOf<String, Job>()
     private var initialized = false
 
+    /**
+     * Bumped whenever the catalogue's contents change, and carried in the virtual
+     * addon's manifest version. Without it the manifest is byte-identical after a
+     * scan and the home screen's refresh signature never fires.
+     */
+    var catalogRevision: Int = 0
+        private set
+
     fun initialize() {
         if (initialized) return
         initialized = true
@@ -104,7 +112,7 @@ object WebDavLibraryRepository {
         WebDavStorage.savePassword(source.id, trimmedPassword)
         val updated = _uiState.value.sources + source
         persistSources(updated)
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
         scan(source.id)
         return Result.success(source)
     }
@@ -117,7 +125,7 @@ object WebDavLibraryRepository {
         scope.launch {
             WebDavIndex.deleteSource(sourceId)
             refreshCounts()
-            AddonRepository.syncWebDavAddon()
+            publishCatalogChange()
         }
     }
 
@@ -126,7 +134,7 @@ object WebDavLibraryRepository {
             if (it.id == sourceId) it.copy(enabled = enabled) else it
         }
         persistSources(updated)
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
     }
 
     fun setWindowSize(sourceId: String, windowSize: Int) {
@@ -185,7 +193,7 @@ object WebDavLibraryRepository {
                     markScanned(sourceId, scan.presentPaths.size)
                     publishProgress(sourceId) { it.copy(phase = ScanPhase.Done) }
                     refreshCounts()
-                    AddonRepository.syncWebDavAddon()
+                    publishCatalogChange()
                 },
                 onFailure = { error ->
                     log.w(error) { "Scan failed for $sourceId" }
@@ -534,7 +542,7 @@ object WebDavLibraryRepository {
         )
         WebDavIndex.putMatch(match)
         refreshCounts()
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
         return Result.success(match)
     }
 
@@ -542,7 +550,7 @@ object WebDavLibraryRepository {
         val current = WebDavIndex.match(folderKey) ?: return
         WebDavIndex.putMatch(current.copy(excluded = excluded, userSet = true))
         refreshCounts()
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
     }
 
     suspend fun rematch(folderKey: String) {
@@ -553,10 +561,15 @@ object WebDavLibraryRepository {
         val match = runCatching { resolveFolder(source, folder) }.getOrNull()
         if (match != null) WebDavIndex.putMatch(match)
         refreshCounts()
-        AddonRepository.syncWebDavAddon()
+        publishCatalogChange()
     }
 
     // ------------------------------------------------------------------ state
+
+    private fun publishCatalogChange() {
+        catalogRevision++
+        AddonRepository.syncWebDavAddon()
+    }
 
     private fun loadSources(): List<WebDavSource> {
         val payload = WebDavStorage.loadSources()
