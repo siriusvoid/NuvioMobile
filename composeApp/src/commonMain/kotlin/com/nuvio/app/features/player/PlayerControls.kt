@@ -69,7 +69,6 @@ import com.nuvio.app.core.ui.appTheme
 import com.nuvio.app.core.ui.appIconPainter
 import com.nuvio.app.core.ui.gradientMask
 import com.nuvio.app.core.ui.nuvioTypeScale
-import com.nuvio.app.core.ui.ThemeColors
 import com.nuvio.app.features.player.skip.SkipInterval
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
