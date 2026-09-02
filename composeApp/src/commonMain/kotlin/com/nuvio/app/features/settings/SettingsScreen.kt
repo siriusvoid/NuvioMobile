@@ -52,6 +52,7 @@ import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.LocalNuvioBottomNavigationOverlayPadding
 import com.nuvio.app.core.ui.LocalNuvioSystemTabBarActive
+import com.nuvio.app.core.ui.nuvioStableTopInset
 import com.nuvio.app.core.ui.NuvioFloatingTabBarTopTrim
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
@@ -1022,7 +1023,7 @@ private fun TabletSettingsScreen(
 ) {
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val activeCategory = SettingsCategory.valueOf(selectedCategory)
-    val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarPadding = nuvioStableTopInset()
     // With the system tab bar up, the reported top inset already covers the bar, so adding room
     // for it again drops this screen below every other tab. Clear the inset once instead.
     val topOffset = if (LocalNuvioSystemTabBarActive.current) {
