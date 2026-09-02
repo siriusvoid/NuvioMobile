@@ -38,7 +38,12 @@ internal object WebDavAddonService {
 
     fun catalogId(sourceId: String): String = "webdav.$sourceId"
 
-    /** The manifest as the app's own model, used when injecting the virtual addon. */
+    /**
+     * The manifest as the app's own model, used when injecting the virtual addon.
+     * Its version carries [WebDavLibraryRepository.catalogRevision] so a scan that
+     * changes the index also changes the manifest, which is how the home rows learn
+     * to refetch.
+     */
     fun manifest(sources: List<WebDavSource>): AddonManifest {
         // A single catalogue per source: films and series sit together, each item
         // carrying its own type so the app still routes it correctly.
@@ -58,7 +63,7 @@ internal object WebDavAddonService {
             id = ADDON_ID,
             name = ADDON_NAME,
             description = "Anime from your debrid WebDAV, mapped to your metadata addon.",
-            version = "1.0.0",
+            version = "1.0.${WebDavLibraryRepository.catalogRevision}",
             logoUrl = null,
             resources = listOf(
                 AddonResource(
