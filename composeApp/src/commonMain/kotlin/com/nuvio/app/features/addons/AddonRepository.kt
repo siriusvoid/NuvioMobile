@@ -427,10 +427,12 @@ object AddonRepository {
 
     /**
      * Rebuilds the generated addons from what they serve: the WebDAV sources and
-     * the imported subtitle packs. Called whenever either changes, so catalogue
-     * rows and the subtitle menu follow the index without a restart. Each is
-     * injected only while it has something to answer with, so an unused feature
-     * never shows up in the addon list.
+     * the imported subtitle packs. Each is injected only while it has something to
+     * answer with, so an unused feature never shows up in the addon list.
+     *
+     * Generated addons are left out of [persist]'s installed-URL list, so their
+     * position has to be restored from the saved display order — otherwise every
+     * launch would push them back to the bottom.
      */
     fun syncVirtualAddons() {
         val sources = WebDavLibraryRepository.uiState.value.sources.filter { it.enabled }
@@ -457,8 +459,22 @@ object AddonRepository {
                     )
                 }
             }
-            current.copy(addons = installed + generated)
+            current.copy(addons = placeGeneratedAddons(installed, generated))
         }
+    }
+
+    private fun placeGeneratedAddons(
+        installed: List<ManagedAddon>,
+        generated: List<ManagedAddon>,
+    ): List<ManagedAddon> {
+        if (generated.isEmpty()) return installed
+        val order = AddonStorage.loadAddonOrder(currentProfileId)
+        val placed = installed.toMutableList()
+        generated.forEach { addon ->
+            val index = order.indexOf(addon.manifestUrl)
+            if (index in 0..placed.size) placed.add(index, addon) else placed.add(addon)
+        }
+        return placed
     }
 
     private fun pushToServer() {
@@ -519,6 +535,10 @@ object AddonRepository {
     }
 
     private fun persist() {
+        AddonStorage.saveAddonOrder(
+            currentProfileId,
+            _uiState.value.addons.map { it.manifestUrl },
+        )
         val addons = _uiState.value.addons.filterNot { it.isVirtual }
         AddonStorage.saveInstalledAddonUrls(
             currentProfileId,
