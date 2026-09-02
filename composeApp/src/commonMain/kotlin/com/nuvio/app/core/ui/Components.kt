@@ -53,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -147,32 +148,62 @@ fun NuvioSurfaceCard(
  * when the tab bar hides on push, so a native title lands ~54pt from where it started. Measuring
  * from the window's inset instead keeps it still, since a transition never perturbs that one.
  *
- * Overlay this on the screen's content rather than placing it in flow; the route must also be
+ * Carries the same fade the native bar drew behind its title, since content scrolls under this one
+ * too. Overlay it on the screen's content rather than placing it in flow; the route must also be
  * listed in `usesComposeNavigationHeader` on the Swift side so the bar draws no title of its own.
  */
 @Composable
 fun NuvioNativeHeaderTitle(
     title: String,
     modifier: Modifier = Modifier,
+    subtitle: String = "",
 ) {
-    Box(
+    val background = MaterialTheme.colorScheme.background
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(top = platformPhysicalTopInset() + NuvioNativeHeaderTitleTopPadding),
-        contentAlignment = Alignment.TopCenter,
+            .height(NuvioNativeHeaderFadeHeight)
+            .background(
+                Brush.verticalGradient(
+                    0f to background,
+                    NuvioNativeHeaderFadeMidStop to background.copy(alpha = NuvioNativeHeaderFadeMidAlpha),
+                    1f to background.copy(alpha = 0f),
+                ),
+            )
+            .padding(top = platformPhysicalTopInset() + NuvioNativeHeaderTitleTopPadding)
+            .padding(horizontal = NuvioNativeHeaderTitleSidePadding),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+        if (subtitle.isNotBlank()) {
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
 /** Sits the replacement title where the native bar had centred its own. */
 private val NuvioNativeHeaderTitleTopPadding = 12.dp
+
+/** Keeps a long title clear of the bar's own back button. */
+private val NuvioNativeHeaderTitleSidePadding = 72.dp
+
+// Mirrors NativeToolbarReadabilityFade on the Swift side, which the native bar draws for routes
+// that keep its title. A route drawing the title here opts out of that one, so it brings its own.
+private val NuvioNativeHeaderFadeHeight = 120.dp
+private const val NuvioNativeHeaderFadeMidStop = 0.55f
+private const val NuvioNativeHeaderFadeMidAlpha = 0.78f
 
 @Composable
 fun NuvioScreenHeader(
