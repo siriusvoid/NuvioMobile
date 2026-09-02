@@ -25,6 +25,9 @@ final class PlayerNowPlayingController {
     private var metadata = Metadata()
     private var playbackState = PlaybackState()
     private var currentArtworkImage: UIImage?
+    private var currentArtwork: MPMediaItemArtwork?
+    private var publishedPositionMs: Int64?
+    private var publishedAt: TimeInterval?
     private var currentArtworkURL: String?
     private var artworkTask: URLSessionDataTask?
     private var remoteTargets: [RemoteCommandTarget] = []
@@ -61,6 +64,7 @@ final class PlayerNowPlayingController {
         if normalizedArtworkUrl != currentArtworkURL {
             currentArtworkURL = normalizedArtworkUrl
             currentArtworkImage = nil
+            currentArtwork = nil
             artworkTask?.cancel()
             artworkTask = nil
 
@@ -71,6 +75,7 @@ final class PlayerNowPlayingController {
 
             if let cached = artworkCache.object(forKey: urlString as NSString) {
                 currentArtworkImage = cached
+                currentArtwork = nil
                 applyNowPlayingInfo()
                 return
             }
@@ -87,6 +92,7 @@ final class PlayerNowPlayingController {
                 DispatchQueue.main.async { [weak self] in
                     guard let self, self.currentArtworkURL == urlString else { return }
                     self.currentArtworkImage = image
+                    self.currentArtwork = nil
                     self.applyNowPlayingInfo()
                 }
             }
@@ -109,22 +115,44 @@ final class PlayerNowPlayingController {
             durationMs: max(0, durationMs),
             playbackSpeed: playbackSpeed > 0 ? playbackSpeed : 1.0
         )
-        let positionChanged = abs(nextState.positionMs - playbackState.positionMs) >= 1_000
-        guard playbackState.isPlaying != nextState.isPlaying ||
+        let stateChanged = playbackState.isPlaying != nextState.isPlaying ||
             playbackState.durationMs != nextState.durationMs ||
-            playbackState.playbackSpeed != nextState.playbackSpeed ||
-            positionChanged else {
+            playbackState.playbackSpeed != nextState.playbackSpeed
+
+        // Position is NOT published on every tick: iOS extrapolates it from elapsed time
+        // and rate, and each publish made the system decode and re-encode the artwork to
+        // ship it to mediaserverd (measured at ~4% of app CPU during playback). Publish
+        // only when the state changes, or when the position leaves the track we last
+        // published — i.e. a seek.
+        let expected = expectedPositionMs()
+        let seeked = expected == nil || abs(nextState.positionMs - expected!) >= 2_000
+
+        guard stateChanged || seeked else {
+            playbackState.positionMs = nextState.positionMs
             return
         }
 
         playbackState = nextState
+        publishedPositionMs = nextState.positionMs
+        publishedAt = Date.timeIntervalSinceReferenceDate
         applyNowPlayingInfo()
+    }
+
+    /// Where the system thinks playback is, given what we last published.
+    private func expectedPositionMs() -> Int64? {
+        guard let publishedPositionMs, let publishedAt else { return nil }
+        guard playbackState.isPlaying else { return publishedPositionMs }
+        let elapsed = Date.timeIntervalSinceReferenceDate - publishedAt
+        return publishedPositionMs + Int64(elapsed * 1000.0 * Double(playbackState.playbackSpeed))
     }
 
     func clear() {
         artworkTask?.cancel()
         artworkTask = nil
         currentArtworkImage = nil
+        currentArtwork = nil
+        publishedPositionMs = nil
+        publishedAt = nil
         currentArtworkURL = nil
         metadata = Metadata()
         playbackState = PlaybackState()
@@ -156,8 +184,13 @@ final class PlayerNowPlayingController {
                 self.playbackState.isPlaying ? self.playbackState.playbackSpeed : 0.0
             )
             info[MPNowPlayingInfoPropertyIsLiveStream] = self.playbackState.durationMs <= 0
-            if let artwork = self.currentArtworkImage {
-                info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: artwork.size) { _ in artwork }
+            // Built once per image. Recreating it per publish made ImageIO transcode
+            // the JPEG every time (IIORecodeAppleJPEG_to_JPEG in the profile).
+            if self.currentArtwork == nil, let artwork = self.currentArtworkImage {
+                self.currentArtwork = MPMediaItemArtwork(boundsSize: artwork.size) { _ in artwork }
+            }
+            if let artwork = self.currentArtwork {
+                info[MPMediaItemPropertyArtwork] = artwork
             }
 
             MPNowPlayingInfoCenter.default().nowPlayingInfo = info

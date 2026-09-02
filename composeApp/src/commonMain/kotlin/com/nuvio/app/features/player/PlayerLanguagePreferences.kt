@@ -377,6 +377,16 @@ private val LanguageNameAliases = mapOf(
     "zulu" to "zu",
 )
 
+private val WhitespaceRegex = Regex("\\s+")
+
+/**
+ * [LanguageNameAliases] is a constant, so its length-descending ordering is constant too.
+ * Building this inside [normalizeLanguageCode] re-sorted all 73 entries on every call,
+ * which showed up as mergeSort on the main thread during playback.
+ */
+private val LanguageNameAliasesByLengthDesc =
+    LanguageNameAliases.entries.sortedByDescending { it.key.length }
+
 fun normalizeLanguageCode(language: String?): String? {
     val raw = language
         ?.trim()
@@ -389,7 +399,7 @@ fun normalizeLanguageCode(language: String?): String? {
         .replace('-', ' ')
         .replace('.', ' ')
         .replace('/', ' ')
-        .replace(Regex("\\s+"), " ")
+        .replace(WhitespaceRegex, " ")
         .trim()
 
     fun containsAny(vararg values: String): Boolean =
@@ -415,8 +425,7 @@ fun normalizeLanguageCode(language: String?): String? {
 
     LanguageCodeAliases[raw]?.let { return it.replace('_', '-').lowercase() }
     LanguageNameAliases[tokenized]?.let { return it }
-    LanguageNameAliases.entries
-        .sortedByDescending { it.key.length }
+    LanguageNameAliasesByLengthDesc
         .firstOrNull { (name, _) ->
             tokenized == name ||
                 tokenized.startsWith("$name ") ||
