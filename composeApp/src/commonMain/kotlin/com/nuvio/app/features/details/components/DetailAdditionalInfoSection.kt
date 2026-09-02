@@ -42,7 +42,6 @@ fun DetailAdditionalInfoSection(
         formatRuntimeForDisplay(meta.runtime)?.let {
             add(stringResource(Res.string.details_runtime) to it)
         }
-        meta.ageRating?.let { add(stringResource(Res.string.details_certification) to it) }
         meta.country?.let { add(stringResource(Res.string.details_origin_country) to it) }
         meta.language?.let {
             add(stringResource(Res.string.details_original_language) to it.uppercase())
