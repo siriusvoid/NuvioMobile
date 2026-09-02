@@ -59,6 +59,14 @@ internal object WebDavIndex {
     private var matchesLoaded = false
     private var reverseIndex: Map<String, List<String>>? = null
 
+    /**
+     * Every folder by [WebDavFolder.key], across all sources. Rebuilt lazily beside
+     * [reverseIndex] and dropped by the same writes: a stream request resolves a
+     * handful of keys, and flattening the whole index to do it made the lookup cost
+     * grow with the library rather than with the answer.
+     */
+    private var foldersByKey: Map<String, WebDavFolder>? = null
+
     suspend fun folders(sourceId: String): List<WebDavFolder> = mutex.withLock {
         loadFoldersLocked(sourceId)
     }
@@ -92,6 +100,7 @@ internal object WebDavIndex {
             val merged = byPath.values.toList()
             foldersBySource[sourceId] = merged
             reverseIndex = null
+            foldersByKey = null
             persistFoldersLocked(sourceId, merged)
 
             if (dropped.isNotEmpty()) {
@@ -109,6 +118,7 @@ internal object WebDavIndex {
                 .map { it.folderKey }
             removedKeys.forEach(matchesByKey::remove)
             reverseIndex = null
+            foldersByKey = null
             WebDavStorage.deleteIndex(sourceId)
             persistMatchesLocked()
         }
@@ -129,6 +139,7 @@ internal object WebDavIndex {
             loadMatchesLocked()
             matchesByKey[match.folderKey] = match
             reverseIndex = null
+            foldersByKey = null
             persistMatchesLocked()
         }
     }
@@ -139,6 +150,7 @@ internal object WebDavIndex {
             loadMatchesLocked()
             matches.forEach { matchesByKey[it.folderKey] = it }
             reverseIndex = null
+            foldersByKey = null
             persistMatchesLocked()
         }
     }
@@ -148,6 +160,7 @@ internal object WebDavIndex {
             loadMatchesLocked()
             matchesByKey.remove(folderKey)
             reverseIndex = null
+            foldersByKey = null
             persistMatchesLocked()
         }
     }
@@ -160,7 +173,7 @@ internal object WebDavIndex {
             val folderKeys = index[contentId].orEmpty()
             if (folderKeys.isEmpty()) return@withLock emptyList()
 
-            val allFolders = foldersBySource.values.flatten().associateBy { it.key }
+            val allFolders = foldersByKeyLocked()
             folderKeys.mapNotNull { key ->
                 val match = matchesByKey[key] ?: return@mapNotNull null
                 if (match.excluded) return@mapNotNull null
@@ -177,8 +190,10 @@ internal object WebDavIndex {
         mutex.withLock {
             loadMatchesLocked()
             ensureAllSourcesLoadedLocked()
-            val modifiedByFolderKey = foldersBySource.values.flatten()
-                .associate { it.key to (it.modifiedAt ?: Long.MIN_VALUE) }
+            val folders = foldersByKeyLocked()
+
+            fun modifiedAtOf(match: WebDavMatch): Long =
+                folders[match.folderKey]?.modifiedAt ?: Long.MIN_VALUE
 
             matchesByKey.values
                 .asSequence()
@@ -186,16 +201,19 @@ internal object WebDavIndex {
                 .filter { contentType == null || it.contentType == contentType }
                 .filter { sourceId == null || it.sourceId == sourceId }
                 .groupBy { it.contentId }
-                .map { (_, group) ->
-                    group.maxBy { modifiedByFolderKey[it.folderKey] ?: Long.MIN_VALUE }
-                }
+                .map { (_, group) -> group.maxBy { modifiedAtOf(it) } }
                 .sortedWith(
-                    compareByDescending<WebDavMatch> {
-                        modifiedByFolderKey[it.folderKey] ?: Long.MIN_VALUE
-                    }.thenBy { it.title.lowercase() },
+                    compareByDescending<WebDavMatch> { modifiedAtOf(it) }
+                        .thenBy { it.title.lowercase() },
                 )
                 .toList()
         }
+
+    private fun foldersByKeyLocked(): Map<String, WebDavFolder> =
+        foldersByKey ?: foldersBySource.values
+            .flatten()
+            .associateBy { it.key }
+            .also { foldersByKey = it }
 
     private fun loadFoldersLocked(sourceId: String): List<WebDavFolder> {
         foldersBySource[sourceId]?.let { return it }
@@ -210,6 +228,7 @@ internal object WebDavIndex {
                 }
         }
         foldersBySource[sourceId] = folders
+        foldersByKey = null
         return folders
     }
 
