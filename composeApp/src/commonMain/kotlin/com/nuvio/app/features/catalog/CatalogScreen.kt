@@ -52,6 +52,7 @@ import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterWatchedOverlay
+import com.nuvio.app.core.ui.NuvioNativeHeaderTitle
 import com.nuvio.app.core.ui.nuvioCardDepth
 import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.core.ui.posterCardClickable
@@ -252,35 +253,11 @@ private fun CatalogHeader(
     modifier: Modifier = Modifier,
 ) {
     if (LocalUseNativeNavigation.current) {
-        // The native bar still owns the back button, but its title rides the bar — and on iPad the
-        // bar re-anchors upward when the tab bar hides on push, so a native title lands ~54pt from
-        // where it started. Drawing it here keeps it with the content instead, measured from the
-        // window's inset, which a transition does not perturb.
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(top = platformPhysicalTopInset() + 8.dp)
-                .height(CatalogNativeHeaderHeight),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top,
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (subtitle.isNotBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
+        NuvioNativeHeaderTitle(
+            title = title,
+            modifier = modifier,
+            subtitle = subtitle,
+        )
         return
     }
 
