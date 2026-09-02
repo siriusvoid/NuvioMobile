@@ -105,19 +105,25 @@ fun HomeHeroSection(
     val coroutineScope = rememberCoroutineScope()
     val autoScrollPage = pagerState.currentPage
 
+    // Keyed on the page so a manual swipe restarts the wait, but it re-arms itself rather than
+    // relying on that key alone: the scroll below runs detached, and an interrupted one can leave
+    // the pager parked between pages without ever moving currentPage. A single-shot effect would
+    // then never fire again and the hero would sit there mid-slide for good.
     LaunchedEffect(autoScrollPage, items.size) {
         if (items.size <= 1) return@LaunchedEffect
-        delay(HERO_AUTO_SCROLL_INTERVAL_MS)
-        while (pagerState.isScrollInProgress) {
-            delay(100L)
-        }
+        while (true) {
+            delay(HERO_AUTO_SCROLL_INTERVAL_MS)
+            while (pagerState.isScrollInProgress) {
+                delay(100L)
+            }
 
-        val nextPage = pagerState.currentPage + 1
-        coroutineScope.launch {
-            if (nextPage < pageCount) {
-                pagerState.animateScrollToPage(nextPage)
-            } else {
-                pagerState.scrollToPage(heroLoopInitialPage(itemCount))
+            val nextPage = pagerState.currentPage + 1
+            coroutineScope.launch {
+                if (nextPage < pageCount) {
+                    pagerState.animateScrollToPage(nextPage)
+                } else {
+                    pagerState.scrollToPage(heroLoopInitialPage(itemCount))
+                }
             }
         }
     }
