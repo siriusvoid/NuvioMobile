@@ -658,7 +658,6 @@ fun MetaDetailsScreen(
                     meta.status != null ||
                         meta.releaseInfo != null ||
                         meta.runtime != null ||
-                        meta.ageRating != null ||
                         meta.country != null ||
                         meta.language != null
                 }
