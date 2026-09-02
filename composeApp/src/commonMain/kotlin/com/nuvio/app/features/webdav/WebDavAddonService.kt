@@ -194,12 +194,26 @@ internal object WebDavAddonService {
         val candidates = WebDavIndex.foldersForContentId(parts.contentId)
         if (candidates.isEmpty()) return emptyStreams()
 
+        // Both of these read storage — the credential out of the keyed store, the
+        // source out of the settings state — and neither varies by file, so they are
+        // resolved once per source rather than once per stream.
+        val headersBySource = HashMap<String, Map<String, String>>()
+        val nameBySource = HashMap<String, String>()
+
         val streams = ArrayList<JsonObject>()
         candidates.forEach { (folder, match) ->
-            val headers = WebDavLibraryRepository.playbackHeaders(match.sourceId)
+            val headers = headersBySource.getOrPut(match.sourceId) {
+                WebDavLibraryRepository.playbackHeaders(match.sourceId)
+            }
+            val sourceName = nameBySource.getOrPut(match.sourceId) {
+                WebDavLibraryRepository.uiState.value.sources
+                    .firstOrNull { it.id == match.sourceId }
+                    ?.displayName
+                    ?: ADDON_NAME
+            }
             val files = selectFiles(folder, match, parts)
             files.forEach { file ->
-                streams.add(buildStream(file, folder, match, headers))
+                streams.add(buildStream(file, folder, match, headers, sourceName))
             }
         }
 
@@ -244,10 +258,9 @@ internal object WebDavAddonService {
         folder: WebDavFolder,
         match: WebDavMatch,
         headers: Map<String, String>,
+        sourceName: String,
     ): JsonObject = buildJsonObject {
-        val source = WebDavLibraryRepository.uiState.value.sources
-            .firstOrNull { it.id == match.sourceId }
-        put("name", source?.displayName ?: ADDON_NAME)
+        put("name", sourceName)
         put("title", file.fileName)
         put("description", "${folder.name}\n${file.fileName}")
         put("url", file.url)

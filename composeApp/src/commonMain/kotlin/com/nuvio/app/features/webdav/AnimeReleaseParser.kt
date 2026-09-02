@@ -27,6 +27,8 @@ object AnimeReleaseParser {
     private val YEAR = Regex("""(?:^|[\s(\[])(19[5-9]\d|20[0-4]\d)(?:[\s)\]]|$)""")
     private val VERSION_SUFFIX = Regex("""v\d+$""")
     private val LEFTOVER_DASH_NUMBER = Regex("""\s-\s*\d{1,4}\s*$""")
+    private val REPEATED_SPACE = Regex("""\s{2,}""")
+    private val SEPARATOR_RUN = Regex("""[._]+""")
 
     private val ROMAN_SEASONS = mapOf(
         "ii" to 2, "iii" to 3, "iv" to 4, "v" to 5, "vi" to 6,
@@ -76,7 +78,7 @@ object AnimeReleaseParser {
 
         val brackets = extractBracketed(normalized)
         var core = brackets.remainder
-            .replace(Regex("""\s{2,}"""), " ")
+            .replace(REPEATED_SPACE, " ")
             .trim(' ', '-', '.', '_')
 
         val group = brackets.tokens.firstOrNull { token ->
@@ -292,8 +294,8 @@ object AnimeReleaseParser {
             }
             .joinToString(" ")
             .replace(VERSION_SUFFIX, "")
-            .replace(Regex("""[._]+"""), " ")
-            .replace(Regex("""\s{2,}"""), " ")
+            .replace(SEPARATOR_RUN, " ")
+            .replace(REPEATED_SPACE, " ")
             .trim(' ', '-', '~', '.', ',')
 
         // Trailing technical words that escaped the brackets.
