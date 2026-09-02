@@ -1170,7 +1170,9 @@ private struct DetailDestinationView: View {
     // bar, and on iPad the bar re-anchors upward when the tab bar hides on push, landing the title
     // ~54pt from where it started. Compose draws it against a transition-stable inset instead.
     private var usesComposeNavigationHeader: Bool {
-        wrapper.route is DetailRoute || wrapper.route is StreamRoute || wrapper.route is CatalogRoute
+        wrapper.route is DetailRoute || wrapper.route is StreamRoute
+            || wrapper.route is CatalogRoute
+            || wrapper.route is DownloadsSettingsRoute || wrapper.route is DownloadShowRoute
     }
 
     private var respectsNativeNavigationSafeArea: Bool {

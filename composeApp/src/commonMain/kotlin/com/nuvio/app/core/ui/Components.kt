@@ -84,7 +84,7 @@ fun NuvioScreen(
     content: LazyListScope.() -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarTop = nuvioStableTopInset()
     val systemTabBarActive = LocalNuvioSystemTabBarActive.current
     // The host already lays this screen out below the system tab bar, so the top inset it reports
     // is room that has been given twice. Anything added here reads as a gap under the bar.
@@ -141,6 +141,39 @@ fun NuvioSurfaceCard(
     }
 }
 
+/**
+ * Title for a screen pushed under the native navigation bar, drawn in place of the bar's own. The
+ * bar keeps the back button, but its title rides the bar — and on iPad the bar re-anchors upward
+ * when the tab bar hides on push, so a native title lands ~54pt from where it started. Measuring
+ * from the window's inset instead keeps it still, since a transition never perturbs that one.
+ *
+ * Overlay this on the screen's content rather than placing it in flow; the route must also be
+ * listed in `usesComposeNavigationHeader` on the Swift side so the bar draws no title of its own.
+ */
+@Composable
+fun NuvioNativeHeaderTitle(
+    title: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = platformPhysicalTopInset() + NuvioNativeHeaderTitleTopPadding),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Sits the replacement title where the native bar had centred its own. */
+private val NuvioNativeHeaderTitleTopPadding = 12.dp
+
 @Composable
 fun NuvioScreenHeader(
     title: String,
@@ -151,7 +184,7 @@ fun NuvioScreenHeader(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val tokens = MaterialTheme.nuvio
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarTop = nuvioStableTopInset()
     val nativeDetailNavigation = LocalUseNativeNavigation.current &&
         !LocalNativeNavigationBarHidden.current &&
         onBack != null
