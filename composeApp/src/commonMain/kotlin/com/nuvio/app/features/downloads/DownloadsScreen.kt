@@ -37,6 +37,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.i18n.localizedByteUnit
+import androidx.compose.foundation.layout.fillMaxSize
+import com.nuvio.app.core.ui.NuvioNativeHeaderTitle
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioStatusModal
@@ -73,14 +76,17 @@ fun DownloadsScreen(
         }
     }
 
+    val headerTitle = if (selectedShowId == null) {
+        stringResource(Res.string.compose_settings_root_downloads_title)
+    } else {
+        selectedShowTitle ?: stringResource(Res.string.downloads_show_downloads)
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
     NuvioScreen {
         stickyHeader {
             NuvioScreenHeader(
-                title = if (selectedShowId == null) {
-                    stringResource(Res.string.compose_settings_root_downloads_title)
-                } else {
-                    selectedShowTitle ?: stringResource(Res.string.downloads_show_downloads)
-                },
+                title = headerTitle,
                 onBack = {
                     if (selectedShowId != null) {
                         onBackFromShow?.invoke() ?: run { selectedShowId = null }
@@ -121,6 +127,11 @@ fun DownloadsScreen(
                 onOpenDownload = onOpenDownload,
                 onDeleteDownload = { downloadPendingDeletionId = it },
             )
+        }
+    }
+
+        if (LocalUseNativeNavigation.current) {
+            NuvioNativeHeaderTitle(title = headerTitle)
         }
     }
 
