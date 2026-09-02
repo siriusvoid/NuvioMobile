@@ -456,16 +456,10 @@ private fun SeasonViewModeToggle(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(
-                if (isPosters) {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                },
-            )
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = if (isPosters) 0.2f else 0.3f),
+                color = Color.White.copy(alpha = 0.2f),
                 shape = RoundedCornerShape(8.dp),
             )
             .clickable(onClick = onClick)
@@ -482,11 +476,7 @@ private fun SeasonViewModeToggle(
                 fontSize = sizing.seasonToggleTextSize,
                 fontWeight = FontWeight.SemiBold,
             ),
-            color = if (isPosters) {
-                MaterialTheme.colorScheme.onSurfaceVariant
-            } else {
-                MaterialTheme.colorScheme.onBackground
-            },
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
