@@ -35,6 +35,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +58,7 @@ import com.nuvio.app.features.home.MetaPreview
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
@@ -71,6 +73,9 @@ private const val HERO_SCROLL_MAX_SCALE = 1.3f
 private const val HERO_SWIPE_THRESHOLD_FRACTION = 0.16f
 private const val HERO_SWIPE_VELOCITY_THRESHOLD = 300f
 private const val HERO_AUTO_SCROLL_INTERVAL_MS = 8_000L
+
+// Long enough that ordinary jank does not read as an off-screen view.
+private const val HERO_FRAME_WAIT_TIMEOUT_MS = 500L
 private const val MOBILE_HERO_VIEWPORT_RATIO = 0.82f
 private const val MOBILE_HERO_MIN_HEIGHT_DP = 360f
 private const val MOBILE_HERO_MAX_HEIGHT_DP = 760f
@@ -113,6 +118,14 @@ fun HomeHeroSection(
         if (items.size <= 1) return@LaunchedEffect
         while (true) {
             delay(HERO_AUTO_SCROLL_INTERVAL_MS)
+            // The interval keeps running while the app is away, but the frame clock does not, and
+            // a scroll animation started without one makes no progress at all — it lands parked
+            // between pages, which is the freeze seen on reopening. A frame that does not arrive
+            // promptly means this view is off screen, so skip the tick and come back round; the
+            // wait stays bounded, because blocking here on a frame would be the same trap again.
+            if (withTimeoutOrNull(HERO_FRAME_WAIT_TIMEOUT_MS) { withFrameNanos { } } == null) {
+                continue
+            }
             while (pagerState.isScrollInProgress) {
                 delay(100L)
             }
