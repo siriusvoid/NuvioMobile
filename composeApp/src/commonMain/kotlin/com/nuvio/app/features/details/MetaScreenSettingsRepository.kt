@@ -48,6 +48,7 @@ data class MetaScreenSettingsUiState(
     val tabLayout: Boolean = false,
     val episodeCardStyle: MetaEpisodeCardStyle = MetaEpisodeCardStyle.Horizontal,
     val blurUnwatchedEpisodes: Boolean = false,
+    val posterTransitionEnabled: Boolean = false,
     val showImdbRatings: Boolean = true,
 )
 
@@ -129,6 +130,8 @@ private data class StoredMetaScreenSettingsPayload(
     val episodeCardStyle: String = "horizontal",
     @SerialName("blur_unwatched_episodes")
     val blurUnwatchedEpisodes: Boolean = false,
+    @SerialName("poster_transition_enabled")
+    val posterTransitionEnabled: Boolean = false,
     @SerialName("show_imdb_ratings")
     val showImdbRatings: Boolean = true,
 )
@@ -208,6 +211,7 @@ object MetaScreenSettingsRepository {
     private var tabLayout: Boolean = false
     private var episodeCardStyle: MetaEpisodeCardStyle = MetaEpisodeCardStyle.Horizontal
     private var blurUnwatchedEpisodes: Boolean = false
+    private var posterTransitionEnabled: Boolean = false
     private var showImdbRatings: Boolean = true
     private fun localizedString(resource: StringResource): String = runBlocking { getString(resource) }
 
@@ -228,6 +232,7 @@ object MetaScreenSettingsRepository {
                 episodeCardStyle = MetaEpisodeCardStyle.parse(parsed.episodeCardStyle)
                     ?: MetaEpisodeCardStyle.Horizontal
                 blurUnwatchedEpisodes = parsed.blurUnwatchedEpisodes
+                posterTransitionEnabled = parsed.posterTransitionEnabled
                 showImdbRatings = parsed.showImdbRatings
                 preferences = parsed.items.mapNotNull { item ->
                     val key = runCatching { MetaScreenSectionKey.valueOf(item.key) }.getOrNull() ?: return@mapNotNull null
@@ -249,6 +254,7 @@ object MetaScreenSettingsRepository {
         tabLayout = false
         episodeCardStyle = MetaEpisodeCardStyle.Horizontal
         blurUnwatchedEpisodes = false
+        posterTransitionEnabled = false
         showImdbRatings = true
         _uiState.value = MetaScreenSettingsUiState()
         ensureLoaded()
@@ -293,6 +299,13 @@ object MetaScreenSettingsRepository {
         persist()
     }
 
+    fun setPosterTransitionEnabled(enabled: Boolean) {
+        ensureLoaded()
+        posterTransitionEnabled = enabled
+        publish()
+        persist()
+    }
+
     fun setShowImdbRatings(enabled: Boolean) {
         ensureLoaded()
         showImdbRatings = enabled
@@ -321,6 +334,7 @@ object MetaScreenSettingsRepository {
         tabLayout = false
         episodeCardStyle = MetaEpisodeCardStyle.Horizontal
         blurUnwatchedEpisodes = false
+        posterTransitionEnabled = false
         showImdbRatings = true
         _uiState.value = MetaScreenSettingsUiState()
     }
@@ -333,6 +347,7 @@ object MetaScreenSettingsRepository {
         episodeCardStyle: MetaEpisodeCardStyle = MetaEpisodeCardStyle.Horizontal,
         blurUnwatchedEpisodes: Boolean = false,
         backgroundMode: MetaScreenBackgroundMode? = null,
+        posterTransitionEnabled: Boolean = false,
         showImdbRatings: Boolean = true,
     ) {
         ensureLoaded()
@@ -341,6 +356,7 @@ object MetaScreenSettingsRepository {
         this.tabLayout = tabLayout
         this.episodeCardStyle = episodeCardStyle
         this.blurUnwatchedEpisodes = blurUnwatchedEpisodes
+        this.posterTransitionEnabled = posterTransitionEnabled
         this.showImdbRatings = showImdbRatings
         preferences = items.associate { item ->
             item.key to StoredMetaScreenSectionPreference(
@@ -369,6 +385,7 @@ object MetaScreenSettingsRepository {
         tabLayout = false
         episodeCardStyle = MetaEpisodeCardStyle.Horizontal
         blurUnwatchedEpisodes = false
+        posterTransitionEnabled = false
         showImdbRatings = true
         normalizePreferences()
         publish()
@@ -439,6 +456,7 @@ object MetaScreenSettingsRepository {
             tabLayout = tabLayout,
             episodeCardStyle = episodeCardStyle,
             blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+            posterTransitionEnabled = posterTransitionEnabled,
             showImdbRatings = showImdbRatings,
         )
     }
@@ -454,6 +472,7 @@ object MetaScreenSettingsRepository {
                     tabLayout = tabLayout,
                     episodeCardStyle = MetaEpisodeCardStyle.persist(episodeCardStyle),
                     blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                    posterTransitionEnabled = posterTransitionEnabled,
                     showImdbRatings = showImdbRatings,
                 ),
             ),

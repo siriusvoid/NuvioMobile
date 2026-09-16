@@ -201,17 +201,18 @@ fun DetailSeriesContent(
                 },
                 label = "season_episodes",
             ) { seasonForContent ->
-                val sectionTitle = if (meta.type != "series" && seasons.size == 1 && seasonForContent <= 0) {
-                    stringResource(Res.string.details_videos)
-                } else {
-                    seasonForContent.label()
-                }
                 Column(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    DetailSectionTitle(
-                        title = sectionTitle,
-                    )
+                    if (seasons.size == 1) {
+                        DetailSectionTitle(
+                            title = if (meta.type != "series" && seasonForContent <= 0) {
+                                stringResource(Res.string.details_videos)
+                            } else {
+                                seasonForContent.label()
+                            },
+                        )
+                    }
                     val seasonEpisodes = groupedEpisodes.getValue(seasonForContent)
                     if (episodeCardStyle == MetaEpisodeCardStyle.Horizontal) {
                         EpisodeHorizontalRow(
@@ -299,13 +300,15 @@ internal fun DetailSeriesListHeader(
                 onSelect = onSeasonSelect,
                 onLongPress = onSeasonLongPress,
             )
-            DetailSectionTitle(
-                title = if (meta.type != "series" && seasons.size == 1 && currentSeason <= 0) {
-                    stringResource(Res.string.details_videos)
-                } else {
-                    currentSeason.label()
-                },
-            )
+            if (seasons.size == 1) {
+                DetailSectionTitle(
+                    title = if (meta.type != "series" && currentSeason <= 0) {
+                        stringResource(Res.string.details_videos)
+                    } else {
+                        currentSeason.label()
+                    },
+                )
+            }
         }
     }
 }
@@ -1173,7 +1176,8 @@ private fun EpisodeListCard(
     onClick: (() -> Unit)? = null,
     onLongPress: (() -> Unit)? = null,
 ) {
-    val cardShape = RoundedCornerShape(sizing.cardRadius)
+    val cornerRadius = rememberPosterCardStyleUiState().cornerRadiusDp.dp
+    val cardShape = RoundedCornerShape(cornerRadius)
     val ratingLabel = remember(imdbRating) { imdbRating?.takeIf { it > 0.0 }?.let(::formatEpisodeRating) }
     val formattedDate = remember(video.released) { video.released?.let { formatReleaseDateForDisplay(it) } }
     Box(
@@ -1201,7 +1205,7 @@ private fun EpisodeListCard(
                 modifier = Modifier
                     .width(sizing.imageWidth)
                     .fillMaxHeight()
-                    .clip(RoundedCornerShape(topStart = sizing.cardRadius, bottomStart = sizing.cardRadius)),
+                    .clip(RoundedCornerShape(topStart = cornerRadius, bottomStart = cornerRadius)),
             ) {
                 val imageUrl = video.thumbnail ?: fallbackImage
                 val shouldBlurArtwork = blurUnwatchedEpisodes && !isWatched
@@ -1340,7 +1344,6 @@ private data class SeriesContentSizing(
     val seasonPosterRadius: Dp,
     val cardHeight: Dp,
     val imageWidth: Dp,
-    val cardRadius: Dp,
     val cardGap: Dp,
     val contentHorizontalPadding: Dp,
     val contentVerticalPadding: Dp,
@@ -1373,7 +1376,6 @@ private fun seriesContentSizing(maxWidthDp: Float): SeriesContentSizing =
             seasonPosterRadius = 16.dp,
             cardHeight = 200.dp,
             imageWidth = 200.dp,
-            cardRadius = 20.dp,
             cardGap = 20.dp,
             contentHorizontalPadding = 20.dp,
             contentVerticalPadding = 18.dp,
@@ -1403,7 +1405,6 @@ private fun seriesContentSizing(maxWidthDp: Float): SeriesContentSizing =
             seasonPosterRadius = 14.dp,
             cardHeight = 180.dp,
             imageWidth = 180.dp,
-            cardRadius = 18.dp,
             cardGap = 18.dp,
             contentHorizontalPadding = 18.dp,
             contentVerticalPadding = 16.dp,
@@ -1433,7 +1434,6 @@ private fun seriesContentSizing(maxWidthDp: Float): SeriesContentSizing =
             seasonPosterRadius = 12.dp,
             cardHeight = 160.dp,
             imageWidth = 160.dp,
-            cardRadius = 16.dp,
             cardGap = 16.dp,
             contentHorizontalPadding = 16.dp,
             contentVerticalPadding = 14.dp,
@@ -1463,7 +1463,6 @@ private fun seriesContentSizing(maxWidthDp: Float): SeriesContentSizing =
             seasonPosterRadius = 8.dp,
             cardHeight = 120.dp,
             imageWidth = 120.dp,
-            cardRadius = 16.dp,
             cardGap = 16.dp,
             contentHorizontalPadding = 12.dp,
             contentVerticalPadding = 12.dp,

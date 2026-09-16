@@ -2,8 +2,10 @@ package com.nuvio.app.features.home.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.MutatePriority
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.stopScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,6 +54,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.heroStretchHeight
+import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.home.MetaPreview
 import kotlinx.coroutines.CoroutineScope
@@ -103,22 +106,31 @@ fun HomeHeroSection(
     val initialPage = remember(itemCount) { heroLoopInitialPage(itemCount) }
     val pagerState = rememberPagerState(initialPage = initialPage, pageCount = { pageCount })
     val coroutineScope = rememberCoroutineScope()
-    val autoScrollPage = pagerState.currentPage
+    val autoScrollPage = pagerState.settledPage
 
-    LaunchedEffect(autoScrollPage, items.size) {
-        if (items.size <= 1) return@LaunchedEffect
+    LaunchedEffect(pagerState) {
+        pagerState.scrollToPage(pagerState.currentPage)
+    }
+
+    ScreenActivityEffect(pagerState) { active ->
+        if (!active) {
+            pagerState.stopScroll(MutatePriority.PreventUserInput)
+            pagerState.scrollToPage(pagerState.currentPage)
+        }
+    }
+
+    ScreenActivityEffect(autoScrollPage, items.size) { active ->
+        if (!active || items.size <= 1) return@ScreenActivityEffect
         delay(HERO_AUTO_SCROLL_INTERVAL_MS)
         while (pagerState.isScrollInProgress) {
             delay(100L)
         }
 
         val nextPage = pagerState.currentPage + 1
-        coroutineScope.launch {
-            if (nextPage < pageCount) {
-                pagerState.animateScrollToPage(nextPage)
-            } else {
-                pagerState.scrollToPage(heroLoopInitialPage(itemCount))
-            }
+        if (nextPage < pageCount) {
+            pagerState.animateScrollToPage(nextPage)
+        } else {
+            pagerState.scrollToPage(heroLoopInitialPage(itemCount))
         }
     }
 
@@ -148,8 +160,6 @@ fun HomeHeroSection(
                 }
             }
         }
-        val heroScrollScale = heroBackgroundScrollScale(scrollOffsetPx)
-        val heroScrollTranslationY = heroBackgroundScrollTranslationY(scrollOffsetPx)
         val currentPage = pagerState.currentPage
         val visiblePages = listOf(currentPage - 1, currentPage, currentPage + 1)
             .filter { page -> page in 0 until pageCount }
@@ -205,11 +215,13 @@ fun HomeHeroSection(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .graphicsLayer {
+                                    val offset = scrollOffsetPx
+                                    val scrollScale = heroBackgroundScrollScale(offset)
                                     alpha = layer.visibility
                                     translationX = -layer.offset * heroWidthPx * HERO_BACKGROUND_PARALLAX
-                                    translationY = heroScrollTranslationY
-                                    scaleX = HERO_BACKGROUND_SCALE * heroScrollScale
-                                    scaleY = HERO_BACKGROUND_SCALE * heroScrollScale
+                                    translationY = heroBackgroundScrollTranslationY(offset)
+                                    scaleX = HERO_BACKGROUND_SCALE * scrollScale
+                                    scaleY = HERO_BACKGROUND_SCALE * scrollScale
                                 },
                             alignment = if (layout.isTablet) Alignment.TopCenter else Alignment.Center,
                             contentScale = ContentScale.Crop,
@@ -499,7 +511,11 @@ private fun mobileHeroHeight(
 ): Dp {
     val viewportDrivenHeight = viewportHeightDp?.let { (it * MOBILE_HERO_VIEWPORT_RATIO).dp }
     val widthFallbackHeight = (maxWidthDp * 1.16f).dp
-    val baseHeight = viewportDrivenHeight ?: widthFallbackHeight
+    val baseHeight = if (mobileBelowSectionHeightHintDp == null) {
+        viewportDrivenHeight?.coerceAtMost(widthFallbackHeight) ?: widthFallbackHeight
+    } else {
+        viewportDrivenHeight ?: widthFallbackHeight
+    }
 
     val maxAllowedFromViewportDp = if (viewportHeightDp != null && mobileBelowSectionHeightHintDp != null) {
         viewportHeightDp - mobileBelowSectionHeightHintDp
