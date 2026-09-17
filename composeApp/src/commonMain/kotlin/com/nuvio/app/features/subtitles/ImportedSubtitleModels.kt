@@ -23,8 +23,6 @@ internal data class ImportedSubtitlePack(
     val mapperSeason: Int? = null,
     /** Season the whole pack was forced onto from settings. */
     val seasonOverride: Int? = null,
-    /** Added to every parsed episode number before placement, set from settings. */
-    val episodeOffset: Int = 0,
     /** Opts the pack out of removal once the show is watched through. */
     val keepAfterWatching: Boolean = false,
     val files: List<ImportedSubtitleFile> = emptyList(),

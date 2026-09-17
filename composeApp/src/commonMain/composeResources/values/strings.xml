@@ -2172,8 +2172,6 @@
     <string name="settings_imported_subtitles_empty">Nothing imported yet. Open a show, then pick Subtitles in its actions menu.</string>
     <string name="settings_imported_subtitles_summary">%1$d files, %2$d matched</string>
     <string name="settings_imported_subtitles_season">Season</string>
-    <string name="settings_imported_subtitles_season_auto">Auto</string>
-    <string name="settings_imported_subtitles_offset">Episode offset</string>
     <string name="settings_imported_subtitles_keep">Keep after watching</string>
     <string name="settings_imported_subtitles_keep_description">Otherwise the files go once every episode they cover is watched</string>
     <string name="settings_imported_subtitles_delete">Delete</string>
