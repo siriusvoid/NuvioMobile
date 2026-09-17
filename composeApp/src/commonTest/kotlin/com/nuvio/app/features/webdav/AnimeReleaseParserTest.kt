@@ -88,6 +88,13 @@ class AnimeReleaseParserTest {
     }
 
     @Test
+    fun `titles compare across accents and possessives`() {
+        assertEquals(1f, AnimeReleaseParser.similarity("Maho Shojo Site", "Mahō Shōjo Site"))
+        assertEquals(1f, AnimeReleaseParser.similarity("Hell Paradise", "Hell’s Paradise"))
+        assertEquals("pokemon", AnimeReleaseParser.normalizeForCompare("Pokémon"))
+    }
+
+    @Test
     fun `dot separated scene folders yield their season`() {
         val parsed = AnimeReleaseParser.parseFolder(
             "Laid-Back.Camp.S02.1080p.BluRay.10-Bit.Dual-Audio.AAC.FLAC2.0.x265-YURASUKA",
