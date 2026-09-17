@@ -27,6 +27,8 @@ import com.nuvio.app.features.webdav.AnimeSearchHit
 import com.nuvio.app.features.webdav.MatchReviewRow
 import com.nuvio.app.features.webdav.PlacementStep
 import com.nuvio.app.features.webdav.WebDavLibraryRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -102,15 +104,15 @@ private fun ReviewRow(
     var query by remember(row.folderKey) { mutableStateOf(row.match?.title ?: row.folderName) }
     var results by remember(row.folderKey) { mutableStateOf<List<AnimeSearchHit>>(emptyList()) }
     var selected by remember(row.folderKey) { mutableStateOf<AnimeSearchHit?>(null) }
-    var season by remember(row.folderKey) { mutableStateOf(row.match?.season) }
-    var offset by remember(row.folderKey) { mutableStateOf(row.match?.episodeOffset ?: 0) }
+    var season by remember(row.folderKey) { mutableStateOf(row.match?.season ?: 1) }
+    // The picked result's season comes from the mapper, a network call, so Apply waits on it.
+    var seasonLookup by remember(row.folderKey) { mutableStateOf<Job?>(null) }
     var searching by remember(row.folderKey) { mutableStateOf(false) }
 
     val summary = row.match?.let { match ->
         buildString {
             append(match.title)
             match.season?.let { append(" · S").append(it) }
-            if (match.episodeOffset != 0) append(" · ").append(match.episodeOffset)
         }
     } ?: stringResource(Res.string.settings_webdav_review_unmatched_label)
 
@@ -202,7 +204,19 @@ private fun ReviewRow(
             ) { Text(stringResource(Res.string.settings_webdav_review_search)) }
 
             results.take(5).forEach { hit ->
-                TextButton(onClick = { selected = hit }) {
+                TextButton(
+                    onClick = {
+                        selected = hit
+                        // A season entry ("2nd Season") carries its season through the mapper.
+                        // The number on screen stays until it answers, and stays for good when
+                        // the mapper has none for this entry.
+                        seasonLookup?.cancel()
+                        seasonLookup = scope.launch {
+                            val mapped = WebDavLibraryRepository.mapperSeason(hit)
+                            if (isActive && mapped != null) season = mapped
+                        }
+                    },
+                ) {
                     Text(
                         text = if (selected === hit) "• ${hit.title}" else hit.title,
                         style = MaterialTheme.typography.bodyMedium,
@@ -215,19 +229,20 @@ private fun ReviewRow(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(stringResource(Res.string.settings_webdav_review_season))
-                TextButton(onClick = { season = ((season ?: 1) - 1).coerceAtLeast(0) }) { Text("−") }
-                Text(season?.toString() ?: "—")
-                TextButton(onClick = { season = (season ?: 0) + 1 }) { Text("+") }
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(stringResource(Res.string.settings_webdav_review_offset))
-                TextButton(onClick = { offset -= 1 }) { Text("−") }
-                Text(offset.toString())
-                TextButton(onClick = { offset += 1 }) { Text("+") }
+                // A number set by hand wins over a lookup still on its way.
+                TextButton(
+                    onClick = {
+                        seasonLookup?.cancel()
+                        season = (season - 1).coerceAtLeast(0)
+                    },
+                ) { Text("−") }
+                Text(season.toString())
+                TextButton(
+                    onClick = {
+                        seasonLookup?.cancel()
+                        season += 1
+                    },
+                ) { Text("+") }
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -236,11 +251,11 @@ private fun ReviewRow(
                     onClick = {
                         val hit = selected ?: return@Button
                         scope.launch {
+                            seasonLookup?.join()
                             WebDavLibraryRepository.applyOverride(
                                 folderKey = row.folderKey,
                                 hit = hit,
                                 season = season,
-                                episodeOffset = offset,
                                 treatAsMovie = false,
                             )
                             expanded = false
