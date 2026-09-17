@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -49,6 +50,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.animation.core.animateDpAsState
+import com.nuvio.app.core.ui.NuvioNativeHeaderTitle
 import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
@@ -56,6 +58,7 @@ import com.nuvio.app.core.ui.NuvioSectionLabel
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
+import com.nuvio.app.navigation.LocalUseNativeNavigation
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableCollectionItemScope
@@ -75,11 +78,13 @@ fun CollectionManagementScreen(
     var importError by remember { mutableStateOf<String?>(null) }
     var showDeleteConfirm by remember { mutableStateOf<String?>(null) }
     var showCopyError by remember { mutableStateOf(false) }
+    val headerTitle = stringResource(Res.string.collections_header)
 
+    Box(modifier = Modifier.fillMaxSize()) {
     NuvioScreen {
         stickyHeader {
             NuvioScreenHeader(
-                title = stringResource(Res.string.collections_header),
+                title = headerTitle,
                 onBack = onBack,
             ) {
                 IconButton(onClick = {
@@ -163,6 +168,11 @@ fun CollectionManagementScreen(
                     )
                 }
             }
+        }
+    }
+
+        if (LocalUseNativeNavigation.current) {
+            NuvioNativeHeaderTitle(title = headerTitle)
         }
     }
 
