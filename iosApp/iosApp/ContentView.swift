@@ -36,6 +36,7 @@ private enum NuvioComposeHost {
 
 private let swipeBackExclusionRectsKey = "NuvioSwipeBackExclusionRects"
 private let swipeBackExclusionDidChangeNotification = "NuvioSwipeBackExclusionDidChange"
+private let contentSwipeBackGestureName = "NuvioContentSwipeBack"
 
 /// Holds off the navigation controller's swipe-back-from-anywhere gesture while a touch
 /// sits over Compose content that scrolls horizontally.
@@ -348,6 +349,11 @@ final class RootComposeViewController: UIViewController {
             let allowsContentSwipeBack =
                 !disablesInteractiveContentPopGesture && !disablesContentSwipeBack
             if let contentPop = navigationController?.interactiveContentPopGestureRecognizer {
+                // Compose 1.12 lets content that consumes a horizontal drag - any scrolling
+                // row - block this gesture, and it recognises the gesture by UIKit's name for
+                // it. Renaming it keeps the swipe starting anywhere, with the exclusion
+                // regions as the only opt-out, as it did before that release.
+                contentPop.name = contentSwipeBackGestureName
                 contentPop.isEnabled = isVisible ? allowsContentSwipeBack : true
                 // Apple's delegate stays in place; the gesture simply cannot begin while
                 // the touch sits inside a region Compose asked us to exclude.
