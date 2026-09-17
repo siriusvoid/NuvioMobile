@@ -162,7 +162,12 @@ internal object WebDavAddonService {
                 if (search.isNullOrBlank()) {
                     matches
                 } else {
-                    matches.filter { it.title.lowercase().contains(search) }
+                    // The row shows the metadata addon's name, so a query typed off the
+                    // screen has to find it by that name as well as the database's.
+                    matches.filter {
+                        it.displayName.lowercase().contains(search) ||
+                            it.title.lowercase().contains(search)
+                    }
                 }
             }
             .drop(skip)
