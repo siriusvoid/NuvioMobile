@@ -66,15 +66,14 @@ internal object ImportedSubtitleMatcher {
 
     /**
      * Fills in season, episode and the metadata addon's video id for every file.
-     * Re-runnable: settings changes to [seasonOverride] or [episodeOffset] come
-     * back through here rather than being applied on top of an earlier result.
+     * Re-runnable: a settings change to [seasonOverride] comes back through here
+     * rather than being applied on top of an earlier result.
      */
     fun place(
         files: List<ImportedSubtitleFile>,
         meta: MetaDetails?,
         seasonHint: Int?,
         seasonOverride: Int?,
-        episodeOffset: Int,
         isMovie: Boolean,
         metaId: String,
     ): List<ImportedSubtitleFile> {
@@ -104,9 +103,8 @@ internal object ImportedSubtitleMatcher {
 
         return files.map { file ->
             val isSpecial = file.parsedSeason == 0
-            val episodeNumber = file.parsedEpisode?.plus(episodeOffset)
             val placement = EpisodePlacement.place(
-                parsedEpisode = episodeNumber,
+                parsedEpisode = file.parsedEpisode,
                 // An override picked in settings replaces the name's own season, but a
                 // special stays a special: nobody overrides a pack onto season 0 by hand.
                 parsedSeason = if (isSpecial) 0 else seasonOverride ?: file.parsedSeason,

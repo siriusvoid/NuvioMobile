@@ -34,6 +34,32 @@ import org.jetbrains.compose.resources.stringResource
 /** Highest season a pack can be forced onto by hand. */
 private const val MAX_SEASON = 40
 
+/** Episode order: numbered seasons, then specials, then files that matched nothing. */
+private val FILE_ORDER = compareBy<ImportedSubtitleFile>(
+    { !it.isMatched },
+    { it.season == 0 },
+    { it.season ?: 0 },
+    { it.episode ?: 0 },
+    { it.fileName.lowercase() },
+)
+
+/**
+ * The season the pack sits on: the one picked by hand, otherwise the one most of
+ * its numbered episodes were placed in. Specials alone count only when nothing
+ * else placed.
+ */
+private fun ImportedSubtitlePack.currentSeason(): Int {
+    seasonOverride?.let { return it }
+    val placed = files.mapNotNull { it.season }
+    return placed.filter { it != 0 }.mostCommon()
+        ?: placed.mostCommon()
+        ?: mapperSeason
+        ?: 1
+}
+
+private fun List<Int>.mostCommon(): Int? =
+    groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
+
 internal fun LazyListScope.importedSubtitlesContent(isTablet: Boolean) {
     item {
         val state by remember {
@@ -73,7 +99,7 @@ private fun ImportedSubtitlePackRow(
     var showFiles by remember(pack.id) { mutableStateOf(false) }
 
     /** Placement runs against the show's episode list, so it is fetched on demand. */
-    fun replace(season: Int?, offset: Int) {
+    fun replace(season: Int) {
         scope.launch {
             val meta = runCatching {
                 MetaDetailsRepository.fetch(type = pack.metaType, id = pack.metaId, cacheResult = true)
@@ -82,7 +108,6 @@ private fun ImportedSubtitlePackRow(
                 packId = pack.id,
                 meta = meta,
                 seasonOverride = season,
-                episodeOffset = offset,
             )
         }
     }
@@ -108,31 +133,13 @@ private fun ImportedSubtitlePackRow(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            StepperControl(
-                label = stringResource(Res.string.settings_imported_subtitles_season),
-                value = pack.seasonOverride?.toString()
-                    ?: stringResource(Res.string.settings_imported_subtitles_season_auto),
-                onDecrement = {
-                    val next = pack.seasonOverride?.minus(1)
-                    replace(next?.takeIf { it >= 0 }, pack.episodeOffset)
-                },
-                onIncrement = {
-                    val next = (pack.seasonOverride ?: 0) + 1
-                    replace(next.coerceAtMost(MAX_SEASON), pack.episodeOffset)
-                },
-            )
-            StepperControl(
-                label = stringResource(Res.string.settings_imported_subtitles_offset),
-                value = if (pack.episodeOffset > 0) "+${pack.episodeOffset}" else pack.episodeOffset.toString(),
-                onDecrement = { replace(pack.seasonOverride, pack.episodeOffset - 1) },
-                onIncrement = { replace(pack.seasonOverride, pack.episodeOffset + 1) },
-            )
-        }
+        val season = pack.currentSeason()
+        StepperControl(
+            label = stringResource(Res.string.settings_imported_subtitles_season),
+            value = season.toString(),
+            onDecrement = { replace((season - 1).coerceAtLeast(0)) },
+            onIncrement = { replace((season + 1).coerceAtMost(MAX_SEASON)) },
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -178,7 +185,7 @@ private fun ImportedSubtitlePackRow(
         }
 
         if (showFiles) {
-            pack.files.forEach { file ->
+            pack.files.sortedWith(FILE_ORDER).forEach { file ->
                 ImportedSubtitleFileRow(file = file)
             }
         }

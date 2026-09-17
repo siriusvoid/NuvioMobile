@@ -123,16 +123,13 @@ internal object ImportedSubtitleRepository {
         return pack.files.size
     }
 
-    /** Re-places a pack after the season or the offset was corrected in settings. */
-    fun updatePlacement(packId: String, meta: MetaDetails?, seasonOverride: Int?, episodeOffset: Int) {
+    /** Re-places a pack after its season was corrected in settings. */
+    fun updatePlacement(packId: String, meta: MetaDetails?, seasonOverride: Int?) {
         val packs = _uiState.value.packs.map { pack ->
             if (pack.id != packId) {
                 pack
             } else {
-                pack.copy(
-                    seasonOverride = seasonOverride,
-                    episodeOffset = episodeOffset,
-                ).placed(meta)
+                pack.copy(seasonOverride = seasonOverride).placed(meta)
             }
         }
         publish(packs)
@@ -223,7 +220,6 @@ internal object ImportedSubtitleRepository {
                 meta = meta,
                 seasonHint = ImportedSubtitleMatcher.seasonHint(sourceName) ?: mapperSeason,
                 seasonOverride = seasonOverride,
-                episodeOffset = episodeOffset,
                 isMovie = metaType.equals("movie", ignoreCase = true),
                 metaId = metaId,
             ),
