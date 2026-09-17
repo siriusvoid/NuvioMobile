@@ -1179,6 +1179,7 @@ private struct DetailDestinationView: View {
         wrapper.route is DetailRoute || wrapper.route is StreamRoute
             || wrapper.route is CatalogRoute
             || wrapper.route is DownloadsSettingsRoute || wrapper.route is DownloadShowRoute
+            || wrapper.route is CollectionsRoute
     }
 
     private var respectsNativeNavigationSafeArea: Bool {
