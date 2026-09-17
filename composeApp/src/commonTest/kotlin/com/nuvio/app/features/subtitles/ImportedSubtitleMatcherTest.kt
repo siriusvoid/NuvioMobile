@@ -69,17 +69,6 @@ class ImportedSubtitleMatcherTest {
     }
 
     @Test
-    fun `an offset shifts the whole pack`() {
-        val files = (1..3).map { episode ->
-            ImportedSubtitleMatcher.parse("[Group] Show - ${pad(episode)} [1080p].ass")
-        }
-
-        val placed = place(files, meta(seasons = mapOf(1 to 24)), episodeOffset = 12)
-
-        assertEquals(listOf(13, 14, 15), placed.map { it.episode })
-    }
-
-    @Test
     fun `a file with no episode number stays unmatched`() {
         val files = listOf(ImportedSubtitleMatcher.parse("readme.srt"))
 
@@ -98,7 +87,6 @@ class ImportedSubtitleMatcherTest {
             meta = null,
             seasonHint = null,
             seasonOverride = null,
-            episodeOffset = 0,
             isMovie = true,
             metaId = "tt0156887",
         )
@@ -127,13 +115,11 @@ class ImportedSubtitleMatcherTest {
         meta: MetaDetails,
         seasonHint: Int? = null,
         seasonOverride: Int? = null,
-        episodeOffset: Int = 0,
     ): List<ImportedSubtitleFile> = ImportedSubtitleMatcher.place(
         files = files,
         meta = meta,
         seasonHint = seasonHint,
         seasonOverride = seasonOverride,
-        episodeOffset = episodeOffset,
         isMovie = false,
         metaId = meta.id,
     )
