@@ -7,6 +7,11 @@ import nuvio.composeapp.generated.resources.action_play_episode
 import nuvio.composeapp.generated.resources.action_resume
 import nuvio.composeapp.generated.resources.action_resume_episode
 import nuvio.composeapp.generated.resources.compose_player_episode_code_episode_only
+import nuvio.composeapp.generated.resources.compose_player_imported_subtitle_missing
+import nuvio.composeapp.generated.resources.imported_subtitles_addon_description
+import nuvio.composeapp.generated.resources.imported_subtitles_addon_name
+import nuvio.composeapp.generated.resources.webdav_addon_description
+import nuvio.composeapp.generated.resources.webdav_addon_name
 import nuvio.composeapp.generated.resources.compose_player_episode_code_full
 import nuvio.composeapp.generated.resources.compose_player_no_subtitle_lines_found
 import nuvio.composeapp.generated.resources.compose_player_subtitle_lines_load_error
@@ -146,6 +151,25 @@ fun localizedNoSubtitleLinesFound(): String =
 
 fun localizedSubtitleLinesLoadError(): String =
     resourceString("Unable to load subtitle lines") { getString(Res.string.compose_player_subtitle_lines_load_error) }
+
+fun localizedImportedSubtitleMissing(): String =
+    resourceString("Imported subtitle file is missing") { getString(Res.string.compose_player_imported_subtitle_missing) }
+
+fun localizedWebDavAddonName(): String =
+    resourceString("WebDAV library") { getString(Res.string.webdav_addon_name) }
+
+fun localizedWebDavAddonDescription(): String =
+    resourceString("Anime from your debrid WebDAV, mapped to your metadata addon.") {
+        getString(Res.string.webdav_addon_description)
+    }
+
+fun localizedImportedSubtitlesAddonName(): String =
+    resourceString("Imported subtitles") { getString(Res.string.imported_subtitles_addon_name) }
+
+fun localizedImportedSubtitlesAddonDescription(): String =
+    resourceString("Subtitle files you imported from this device.") {
+        getString(Res.string.imported_subtitles_addon_description)
+    }
 
 fun localizedBadgeImportFailed(): String =
     resourceString("Badge import failed.") { getString(Res.string.settings_stream_badge_import_failed) }

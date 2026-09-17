@@ -1,5 +1,7 @@
 package com.nuvio.app.features.webdav
 
+import com.nuvio.app.core.i18n.localizedWebDavAddonDescription
+import com.nuvio.app.core.i18n.localizedWebDavAddonName
 import com.nuvio.app.features.addons.AddonCatalog
 import com.nuvio.app.features.addons.AddonExtraProperty
 import com.nuvio.app.features.addons.AddonManifest
@@ -30,7 +32,6 @@ internal object WebDavAddonService {
     const val HOST = "library"
     const val MANIFEST_URL = "${SCHEME}$HOST/manifest.json"
     const val ADDON_ID = "nuvio.webdav.library"
-    const val ADDON_NAME = "WebDAV library"
 
     private const val PAGE_SIZE = 100
 
@@ -61,8 +62,8 @@ internal object WebDavAddonService {
 
         return AddonManifest(
             id = ADDON_ID,
-            name = ADDON_NAME,
-            description = "Anime from your debrid WebDAV, mapped to your metadata addon.",
+            name = localizedWebDavAddonName(),
+            description = localizedWebDavAddonDescription(),
             version = "1.0.${WebDavLibraryRepository.catalogRevision}",
             logoUrl = null,
             resources = listOf(
@@ -101,9 +102,9 @@ internal object WebDavAddonService {
         val sources = WebDavLibraryRepository.uiState.value.sources.filter { it.enabled }
         return buildJsonObject {
             put("id", ADDON_ID)
-            put("name", ADDON_NAME)
+            put("name", localizedWebDavAddonName())
             put("version", "1.0.0")
-            put("description", "Anime from your debrid WebDAV, mapped to your metadata addon.")
+            put("description", localizedWebDavAddonDescription())
             putJsonArray("types") {
                 add(WebDavMatch.CONTENT_TYPE_SERIES)
                 add(WebDavMatch.CONTENT_TYPE_MOVIE)

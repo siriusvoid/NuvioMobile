@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.i18n.localizedImportedSubtitleMissing
 import com.nuvio.app.core.i18n.localizedNoSubtitleLinesFound
 import com.nuvio.app.core.i18n.localizedSubtitleLinesLoadError
 import com.nuvio.app.features.addons.httpGetTextWithHeaders
@@ -31,7 +32,7 @@ internal fun PlayerScreenRuntime.loadSubtitleAutoSyncCues(force: Boolean = false
         val result = runCatching {
             val body = if (subtitle.isLocalFile) {
                 ImportedSubtitleRepository.readSubtitleText(subtitle.url)
-                    ?: error("Imported subtitle file is missing")
+                    ?: error(localizedImportedSubtitleMissing())
             } else {
                 httpGetTextWithHeaders(
                     url = subtitle.url,

@@ -92,14 +92,14 @@ data class WebDavFolder(
 }
 
 /** Which rung of the placement ladder decided a match — surfaced in the review screen. */
-enum class PlacementStep(val label: String) {
-    ExplicitSeasonEpisode("filename S/E"),
-    MapperSeason("mapper season"),
-    EpisodeCountFit("episode count"),
-    AirDateAnchor("air date"),
-    FlattenedAbsolute("flattened"),
-    Manual("manual"),
-    Unresolved("unresolved"),
+enum class PlacementStep {
+    ExplicitSeasonEpisode,
+    MapperSeason,
+    EpisodeCountFit,
+    AirDateAnchor,
+    FlattenedAbsolute,
+    Manual,
+    Unresolved,
 }
 
 /** The resolved identity of one torrent folder. */
