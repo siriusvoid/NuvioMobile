@@ -59,17 +59,22 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_back
 import nuvio.composeapp.generated.resources.action_ok
 import org.jetbrains.compose.resources.stringResource
+import kotlin.math.abs
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -159,33 +164,35 @@ fun NuvioNativeHeaderTitle(
     subtitle: String = "",
 ) {
     val background = MaterialTheme.colorScheme.background
+    val fade = remember(background) { nuvioNativeHeaderFade(background) }
+    val hasSubtitle = subtitle.isNotBlank()
     Column(
         modifier = modifier
             .fillMaxWidth()
             .height(NuvioNativeHeaderFadeHeight)
-            .background(
-                Brush.verticalGradient(
-                    0f to background,
-                    NuvioNativeHeaderFadeMidStop to background.copy(alpha = NuvioNativeHeaderFadeMidAlpha),
-                    1f to background.copy(alpha = 0f),
-                ),
+            .background(fade)
+            .padding(
+                top = platformPhysicalTopInset() + if (hasSubtitle) {
+                    NuvioNativeHeaderTitleTopPadding
+                } else {
+                    NuvioNativeHeaderSoleTitleTopPadding
+                },
             )
-            .padding(top = platformPhysicalTopInset() + NuvioNativeHeaderTitleTopPadding)
             .padding(horizontal = NuvioNativeHeaderTitleSidePadding),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onBackground,
+            style = if (hasSubtitle) NuvioNativeHeaderTitleStyle else NuvioNativeHeaderSoleTitleStyle,
+            color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        if (subtitle.isNotBlank()) {
+        if (hasSubtitle) {
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = NuvioNativeHeaderSubtitleStyle,
+                color = NuvioNativeHeaderSubtitleColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -193,17 +200,71 @@ fun NuvioNativeHeaderTitle(
     }
 }
 
-/** Sits the replacement title where the native bar had centred its own. */
-private val NuvioNativeHeaderTitleTopPadding = 12.dp
+// The native bar's inline title and subtitle, which this replaces: the system font rather than the
+// app's, in iOS's dark label colours, so a Compose-drawn title reads the same as a native one.
+// UIKit tightens the system font's tracking, which Compose does not, so both lines carry it here.
+private val NuvioNativeHeaderTracking = (-0.018).em
+private val NuvioNativeHeaderTitleStyle = TextStyle(
+    fontFamily = FontFamily.Default,
+    fontSize = 15.sp,
+    fontWeight = FontWeight.SemiBold,
+    letterSpacing = NuvioNativeHeaderTracking,
+)
+/** Without a subtitle the bar sets its title larger, centred in the bar. */
+private val NuvioNativeHeaderSoleTitleStyle = NuvioNativeHeaderTitleStyle.copy(fontSize = 17.sp)
+private val NuvioNativeHeaderSubtitleStyle = TextStyle(
+    fontFamily = FontFamily.Default,
+    fontSize = 12.sp,
+    fontWeight = FontWeight.Normal,
+    letterSpacing = NuvioNativeHeaderTracking,
+)
+
+/** The bar's subtitle grey, a little brighter than iOS `secondaryLabel` in dark mode. */
+private val NuvioNativeHeaderSubtitleColor = Color(0xA3EBEBF5)
+
+/** Sits the replacement title and subtitle where the native bar had centred its own. */
+private val NuvioNativeHeaderTitleTopPadding = 6.dp
+private val NuvioNativeHeaderSoleTitleTopPadding = 12.dp
 
 /** Keeps a long title clear of the bar's own back button. */
 private val NuvioNativeHeaderTitleSidePadding = 72.dp
 
-// Mirrors NativeToolbarReadabilityFade on the Swift side, which the native bar draws for routes
-// that keep its title. A route drawing the title here opts out of that one, so it brings its own.
-private val NuvioNativeHeaderFadeHeight = 120.dp
-private const val NuvioNativeHeaderFadeMidStop = 0.55f
-private const val NuvioNativeHeaderFadeMidAlpha = 0.78f
+// Stands in for NativeToolbarReadabilityFade on the Swift side, which the native bar draws for
+// routes that keep its title; a route drawing the title here opts out of that one. The band is
+// taller than the darkness alone needs so the falloff below the title stays gentle.
+private val NuvioNativeHeaderFadeHeight = 150.dp
+private const val NuvioNativeHeaderFadeStopCount = 48
+
+/**
+ * Caps the fade's top. The native fade is solid there, but in a grey that lifts it off a black page;
+ * at full opacity in the page's own black this strip reads heavier, so a little content shows
+ * through instead. The cap gives way to the curve just above the title.
+ */
+private const val NuvioNativeHeaderFadeStartAlpha = 0.85f
+
+/**
+ * How far either side of the handover the cap and the curve are blended, in opacity. A plain
+ * minimum leaves a corner there, which reads as a line across the content above the title.
+ */
+private const val NuvioNativeHeaderFadeCapBlend = 0.16f
+
+/**
+ * Fades along (1 - t²)², capped at the start opacity through a smooth minimum. The curve ends flat,
+ * so the fade thins without a visible bend and meets the content without a seam.
+ */
+private fun nuvioNativeHeaderFade(background: Color): Brush {
+    val stops = Array(NuvioNativeHeaderFadeStopCount + 1) { index ->
+        val position = index / NuvioNativeHeaderFadeStopCount.toFloat()
+        val remaining = 1f - position * position
+        val curve = remaining * remaining
+        val overlap = (NuvioNativeHeaderFadeCapBlend - abs(NuvioNativeHeaderFadeStartAlpha - curve))
+            .coerceAtLeast(0f) / NuvioNativeHeaderFadeCapBlend
+        val alpha = minOf(NuvioNativeHeaderFadeStartAlpha, curve) -
+            overlap * overlap * NuvioNativeHeaderFadeCapBlend / 4f
+        position to background.copy(alpha = alpha)
+    }
+    return Brush.verticalGradient(*stops)
+}
 
 @Composable
 fun NuvioScreenHeader(
