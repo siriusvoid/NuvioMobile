@@ -39,6 +39,9 @@ import com.nuvio.app.features.webdav.WebDavSource
 import com.nuvio.app.features.webdav.WebDavUiState
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.getPluralString
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 internal fun LazyListScope.webDavSettingsContent(
@@ -105,11 +108,12 @@ private fun ColumnScope.WebDavSourceCard(
             Res.string.settings_webdav_status_folders,
             progress.foldersDone,
             progress.foldersPlanned,
-            progress.filesFound,
+            pluralStringResource(Res.plurals.settings_webdav_file_count, progress.filesFound, progress.filesFound),
         )
 
-        ScanPhase.Matching -> stringResource(
-            Res.string.settings_webdav_status_matching,
+        ScanPhase.Matching -> pluralStringResource(
+            Res.plurals.settings_webdav_status_matching,
+            progress.foldersPlanned,
             progress.foldersPlanned,
         )
 
@@ -121,7 +125,12 @@ private fun ColumnScope.WebDavSourceCard(
         else -> if (source.lastScanAt == null && folders == 0) {
             stringResource(Res.string.settings_webdav_never_scanned)
         } else {
-            stringResource(Res.string.settings_webdav_status_idle, folders, files, matched)
+            stringResource(
+                Res.string.settings_webdav_status_idle,
+                pluralStringResource(Res.plurals.settings_webdav_folder_count, folders, folders),
+                pluralStringResource(Res.plurals.settings_webdav_file_count, files, files),
+                stringResource(Res.string.settings_webdav_matched_count, matched),
+            )
         }
     }
 
@@ -246,6 +255,15 @@ private fun WebDavMessageRow(text: String, isTablet: Boolean) {
     )
 }
 
+/** Brand names stay as they are; only the custom option is words that translate. */
+@Composable
+private fun WebDavProvider.label(): String =
+    if (this == WebDavProvider.Custom) {
+        stringResource(Res.string.settings_webdav_provider_custom)
+    } else {
+        displayName
+    }
+
 private fun rowHorizontalPadding(isTablet: Boolean): Dp = if (isTablet) 20.dp else 16.dp
 
 private fun rowVerticalPadding(isTablet: Boolean): Dp = if (isTablet) 16.dp else 14.dp
@@ -275,6 +293,7 @@ private fun AddWebDavSourceForm(isTablet: Boolean) {
     var busy by rememberSaveable { mutableStateOf(false) }
 
     val selectedProvider = WebDavProvider.fromId(provider)
+    val providerLabel = selectedProvider.label()
 
     fun applyProvider(next: WebDavProvider) {
         provider = next.id
@@ -298,10 +317,11 @@ private fun AddWebDavSourceForm(isTablet: Boolean) {
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             WebDavProvider.entries.forEach { option ->
+                val label = option.label()
                 if (option == selectedProvider) {
-                    Button(onClick = { applyProvider(option) }) { Text(option.displayName) }
+                    Button(onClick = { applyProvider(option) }) { Text(label) }
                 } else {
-                    OutlinedButton(onClick = { applyProvider(option) }) { Text(option.displayName) }
+                    OutlinedButton(onClick = { applyProvider(option) }) { Text(label) }
                 }
             }
         }
@@ -391,7 +411,7 @@ private fun AddWebDavSourceForm(isTablet: Boolean) {
                         )
                         message = when (result) {
                             is WebDavConnectionResult.Success ->
-                                "Connected. Found ${result.entryCount} entries."
+                                getPluralString(Res.plurals.settings_webdav_test_ok, result.entryCount, result.entryCount)
 
                             is WebDavConnectionResult.Failure -> result.message
                         }
@@ -413,7 +433,7 @@ private fun AddWebDavSourceForm(isTablet: Boolean) {
                     scope.launch {
                         val result = WebDavLibraryRepository.addSource(
                             provider = selectedProvider,
-                            displayName = displayName,
+                            displayName = displayName.ifBlank { providerLabel },
                             baseUrl = baseUrl,
                             username = username,
                             password = password,
@@ -426,7 +446,7 @@ private fun AddWebDavSourceForm(isTablet: Boolean) {
                                 message = null
                             },
                             onFailure = { error ->
-                                message = error.message ?: "Could not add the source."
+                                message = error.message ?: getString(Res.string.settings_webdav_add_failed)
                             },
                         )
                         busy = false

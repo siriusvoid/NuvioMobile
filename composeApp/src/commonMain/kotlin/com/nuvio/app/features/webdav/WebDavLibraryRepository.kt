@@ -17,6 +17,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import io.ktor.util.date.GMTDate
 import kotlinx.serialization.json.Json
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.settings_webdav_enter_server
+import nuvio.composeapp.generated.resources.settings_webdav_scan_failed_fallback
+import org.jetbrains.compose.resources.getString
 
 /** One folder as the review screen shows it. */
 data class MatchReviewRow(
@@ -74,7 +78,7 @@ object WebDavLibraryRepository {
     ): WebDavConnectionResult {
         val normalizedBase = WebDavUrl.normalizeBaseUrl(baseUrl)
         if (normalizedBase.isBlank()) {
-            return WebDavConnectionResult.Failure("Enter the server address first.")
+            return WebDavConnectionResult.Failure(getString(Res.string.settings_webdav_enter_server))
         }
         val client = WebDavClient(normalizedBase, username.trim(), password.trim())
         return client.testConnection(WebDavUrl.normalizeRootPath(rootPath))
@@ -198,11 +202,9 @@ object WebDavLibraryRepository {
                 },
                 onFailure = { error ->
                     log.w(error) { "Scan failed for $sourceId" }
+                    val message = error.message ?: getString(Res.string.settings_webdav_scan_failed_fallback)
                     publishProgress(sourceId) {
-                        it.copy(
-                            phase = ScanPhase.Failed,
-                            errorMessage = error.message ?: "The scan could not finish.",
-                        )
+                        it.copy(phase = ScanPhase.Failed, errorMessage = message)
                     }
                 },
             )

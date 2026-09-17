@@ -29,6 +29,7 @@ import com.nuvio.app.features.subtitles.ImportedSubtitlePack
 import com.nuvio.app.features.subtitles.ImportedSubtitleRepository
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 /** Highest season a pack can be forced onto by hand. */
@@ -122,8 +123,12 @@ private fun ImportedSubtitlePackRow(
             text = listOfNotNull(
                 stringResource(
                     Res.string.settings_imported_subtitles_summary,
-                    pack.files.size,
-                    pack.matchedCount,
+                    pluralStringResource(
+                        Res.plurals.settings_imported_subtitles_file_count,
+                        pack.files.size,
+                        pack.files.size,
+                    ),
+                    stringResource(Res.string.settings_imported_subtitles_matched_count, pack.matchedCount),
                 ),
                 pack.sourceName?.takeIf { it.isNotBlank() },
             ).joinToString(" · "),
