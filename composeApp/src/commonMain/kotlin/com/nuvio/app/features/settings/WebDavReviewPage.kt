@@ -31,9 +31,21 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 private const val LOW_CONFIDENCE = 0.75f
+
+private fun PlacementStep.labelRes(): StringResource = when (this) {
+    PlacementStep.ExplicitSeasonEpisode -> Res.string.settings_webdav_step_filename
+    PlacementStep.MapperSeason -> Res.string.settings_webdav_step_mapper_season
+    PlacementStep.EpisodeCountFit -> Res.string.settings_webdav_step_episode_count
+    PlacementStep.AirDateAnchor -> Res.string.settings_webdav_step_air_date
+    PlacementStep.FlattenedAbsolute -> Res.string.settings_webdav_step_flattened
+    PlacementStep.Manual -> Res.string.settings_webdav_step_manual
+    PlacementStep.Unresolved -> Res.string.settings_webdav_step_unresolved
+}
 
 internal fun LazyListScope.webDavReviewContent(
     isTablet: Boolean,
@@ -76,7 +88,7 @@ internal fun LazyListScope.webDavReviewContent(
 
 private fun LazyListScope.reviewBucket(
     isTablet: Boolean,
-    titleRes: org.jetbrains.compose.resources.StringResource,
+    titleRes: StringResource,
     rows: List<MatchReviewRow>,
     onChanged: () -> Unit,
 ) {
@@ -132,7 +144,7 @@ private fun ReviewRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = stringResource(Res.string.settings_webdav_review_files, row.fileCount),
+                text = pluralStringResource(Res.plurals.settings_webdav_file_count, row.fileCount, row.fileCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -140,7 +152,7 @@ private fun ReviewRow(
                 Text(
                     text = stringResource(
                         Res.string.settings_webdav_review_step,
-                        match.placementStep.label,
+                        stringResource(match.placementStep.labelRes()),
                     ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

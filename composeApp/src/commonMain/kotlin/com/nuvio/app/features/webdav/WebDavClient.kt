@@ -2,6 +2,18 @@ package com.nuvio.app.features.webdav
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.httpRequestRaw
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.settings_webdav_http_401
+import nuvio.composeapp.generated.resources.settings_webdav_http_403
+import nuvio.composeapp.generated.resources.settings_webdav_http_404
+import nuvio.composeapp.generated.resources.settings_webdav_http_405
+import nuvio.composeapp.generated.resources.settings_webdav_http_429
+import nuvio.composeapp.generated.resources.settings_webdav_http_5xx
+import nuvio.composeapp.generated.resources.settings_webdav_http_error
+import nuvio.composeapp.generated.resources.settings_webdav_http_error_with_message
+import nuvio.composeapp.generated.resources.settings_webdav_http_other
+import nuvio.composeapp.generated.resources.settings_webdav_unreachable
+import org.jetbrains.compose.resources.getString
 
 /**
  * The WebDAV verbs this feature needs, over the app's existing raw HTTP primitive.
@@ -87,7 +99,7 @@ internal class WebDavClient(
         return result.fold(
             onSuccess = { WebDavConnectionResult.Success(it.size) },
             onFailure = { error ->
-                WebDavConnectionResult.Failure(error.message ?: "Could not reach the server")
+                WebDavConnectionResult.Failure(error.message ?: getString(Res.string.settings_webdav_unreachable))
             },
         )
     }
@@ -159,27 +171,23 @@ internal class WebDavClient(
      * Failure text carries the status code and whatever the server said, so a
      * failed connection is diagnosable from the screen instead of by guesswork.
      */
-    private fun describeStatus(status: Int, body: String): String {
-        val explanation = when (status) {
-            401 -> "no credentials reached the server"
-            403 -> "the credentials were not accepted"
-            404 -> "that path does not exist"
-            405 -> "the server does not allow PROPFIND here"
-            429 -> "the server is rate limiting, try again shortly"
-            in 500..599 -> "the server had an internal error"
-            else -> "the request was rejected"
-        }
+    private suspend fun describeStatus(status: Int, body: String): String {
+        val explanation = getString(
+            when (status) {
+                401 -> Res.string.settings_webdav_http_401
+                403 -> Res.string.settings_webdav_http_403
+                404 -> Res.string.settings_webdav_http_404
+                405 -> Res.string.settings_webdav_http_405
+                429 -> Res.string.settings_webdav_http_429
+                in 500..599 -> Res.string.settings_webdav_http_5xx
+                else -> Res.string.settings_webdav_http_other
+            },
+        )
         val serverMessage = serverMessageFrom(body)
-        return buildString {
-            append("HTTP ")
-            append(status)
-            append(" — ")
-            append(explanation)
-            if (serverMessage != null) {
-                append(". Server said: ")
-                append(serverMessage)
-            }
-            append(".")
+        return if (serverMessage != null) {
+            getString(Res.string.settings_webdav_http_error_with_message, status, explanation, serverMessage)
+        } else {
+            getString(Res.string.settings_webdav_http_error, status, explanation)
         }
     }
 

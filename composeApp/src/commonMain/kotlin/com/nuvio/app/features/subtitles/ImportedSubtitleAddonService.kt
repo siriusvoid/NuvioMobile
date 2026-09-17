@@ -1,5 +1,7 @@
 package com.nuvio.app.features.subtitles
 
+import com.nuvio.app.core.i18n.localizedImportedSubtitlesAddonDescription
+import com.nuvio.app.core.i18n.localizedImportedSubtitlesAddonName
 import com.nuvio.app.features.addons.AddonManifest
 import com.nuvio.app.features.addons.AddonResource
 import com.nuvio.app.features.webdav.WebDavUrl
@@ -23,9 +25,7 @@ internal object ImportedSubtitleAddonService {
     private const val HOST = "imported"
     const val MANIFEST_URL = "${SCHEME}$HOST/manifest.json"
     const val ADDON_ID = "nuvio.imported.subtitles"
-    const val ADDON_NAME = "Imported subtitles"
 
-    private const val DESCRIPTION = "Subtitle files you imported from this device."
     private const val CONTENT_TYPE_SERIES = "series"
     private const val CONTENT_TYPE_MOVIE = "movie"
 
@@ -33,8 +33,8 @@ internal object ImportedSubtitleAddonService {
 
     fun manifest(): AddonManifest = AddonManifest(
         id = ADDON_ID,
-        name = ADDON_NAME,
-        description = DESCRIPTION,
+        name = localizedImportedSubtitlesAddonName(),
+        description = localizedImportedSubtitlesAddonDescription(),
         version = "1.0.0",
         logoUrl = null,
         resources = listOf(
@@ -65,9 +65,9 @@ internal object ImportedSubtitleAddonService {
 
     private fun manifestJson(): String = buildJsonObject {
         put("id", ADDON_ID)
-        put("name", ADDON_NAME)
+        put("name", localizedImportedSubtitlesAddonName())
         put("version", "1.0.0")
-        put("description", DESCRIPTION)
+        put("description", localizedImportedSubtitlesAddonDescription())
         putJsonArray("types") {
             add(CONTENT_TYPE_SERIES)
             add(CONTENT_TYPE_MOVIE)
@@ -109,7 +109,7 @@ internal object ImportedSubtitleAddonService {
                             put("lang", match.pack.language)
                             // The folder is what tells one fansub group's translation
                             // from another once both are imported for the same episode.
-                            put("name", match.pack.sourceName?.takeIf { it.isNotBlank() } ?: ADDON_NAME)
+                            put("name", match.pack.sourceName?.takeIf { it.isNotBlank() } ?: localizedImportedSubtitlesAddonName())
                         },
                     )
                 }
