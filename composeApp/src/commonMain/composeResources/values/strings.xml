@@ -2406,7 +2406,6 @@
     <string name="settings_webdav_review_empty">Nothing to review yet. Run a scan first.</string>
     <string name="settings_webdav_review_search">Search for the right title</string>
     <string name="settings_webdav_review_season">Season</string>
-    <string name="settings_webdav_review_offset">Episode offset</string>
     <string name="settings_webdav_review_exclude">Exclude from library</string>
     <string name="settings_webdav_review_include">Include in library</string>
     <string name="settings_webdav_review_rematch">Match again</string>

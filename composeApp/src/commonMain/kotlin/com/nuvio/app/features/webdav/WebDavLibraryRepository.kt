@@ -299,12 +299,10 @@ object WebDavLibraryRepository {
         val parsed = AnimeReleaseParser.parseFolder(folder.name)
         if (parsed.title.isBlank()) return null
 
-        val files = folder.files
-
         val hits = AnimeSearchClient.search(parsed.title)
         if (hits.isEmpty()) return null
 
-        val packSize = files.size
+        val packSize = folder.files.size
         val scored = hits
             .map { hit -> hit to scoreHit(hit, parsed, packSize) }
             .sortedByDescending { it.second }
@@ -337,20 +335,13 @@ object WebDavLibraryRepository {
             )
         }
 
-        val episodes = meta.toEpisodeSlots()
-        val firstEpisode = files
-            .mapNotNull { AnimeReleaseParser.parseFile(it.fileName).episode }
-            .minOrNull()
-            ?: parsed.episodeRange?.first
-            ?: parsed.episode
-
-        val placement = EpisodePlacement.place(
-            parsedEpisode = firstEpisode,
+        val placement = placeFolder(
+            folder = folder,
+            parsed = parsed,
             parsedSeason = parsed.season,
             mapperSeason = arm?.season,
-            packSize = packSize,
             entryStartEpochSeconds = hit.startDateEpochSeconds,
-            episodes = episodes,
+            meta = meta,
         )
 
         return WebDavMatch(
@@ -363,7 +354,45 @@ object WebDavLibraryRepository {
             poster = hit.poster,
             metaName = meta?.name,
             metaPoster = meta?.poster,
-            season = placement?.season ?: arm?.season,
+            season = placement.season,
+            episodeOffset = placement.episodeOffset,
+            step = placement.step.name,
+            confidence = confidence,
+        )
+    }
+
+    private data class FolderPlacement(
+        val season: Int?,
+        val episodeOffset: Int,
+        val step: PlacementStep,
+    )
+
+    /** Where a series folder's run starts, placed by the lowest episode number in it. */
+    private fun placeFolder(
+        folder: WebDavFolder,
+        parsed: ParsedRelease,
+        parsedSeason: Int?,
+        mapperSeason: Int?,
+        entryStartEpochSeconds: Long?,
+        meta: MetaDetails?,
+    ): FolderPlacement {
+        val firstEpisode = folder.files
+            .mapNotNull { AnimeReleaseParser.parseFile(it.fileName).episode }
+            .minOrNull()
+            ?: parsed.episodeRange?.first
+            ?: parsed.episode
+
+        val placement = EpisodePlacement.place(
+            parsedEpisode = firstEpisode,
+            parsedSeason = parsedSeason,
+            mapperSeason = mapperSeason,
+            packSize = folder.files.size,
+            entryStartEpochSeconds = entryStartEpochSeconds,
+            episodes = meta.toEpisodeSlots(),
+        )
+
+        return FolderPlacement(
+            season = placement?.season ?: mapperSeason,
             // The offset falls out of placement: for a pack numbered inside its own
             // cour it is zero, and for an absolute-numbered long-runner it shifts the
             // whole folder onto the right season.
@@ -372,8 +401,7 @@ object WebDavLibraryRepository {
             } else {
                 0
             },
-            step = (placement?.step ?: PlacementStep.Unresolved).name,
-            confidence = confidence,
+            step = placement?.step ?: PlacementStep.Unresolved,
         )
     }
 
@@ -502,12 +530,22 @@ object WebDavLibraryRepository {
     internal suspend fun searchForOverride(query: String): List<AnimeSearchHit> =
         AnimeSearchClient.search(query)
 
-    /** Applies a manual correction. Rescans never overwrite it. */
+    /** The season the mapper puts a search hit in, e.g. 2 for a "2nd Season" entry. */
+    internal suspend fun mapperSeason(hit: AnimeSearchHit): Int? =
+        ArmMappingClient.lookup(hit.source, hit.id)?.season
+
+    /**
+     * Applies a manual correction. Rescans never overwrite it.
+     *
+     * The episode offset is still worked out rather than asked for: the folder is
+     * placed the same way a scan places it, with the season picked here taking the
+     * mapper's place. An absolute-numbered pack put on season 2 by hand then lands
+     * on season 2's episodes instead of on numbers the season does not have.
+     */
     internal suspend fun applyOverride(
         folderKey: String,
         hit: AnimeSearchHit,
-        season: Int?,
-        episodeOffset: Int,
+        season: Int,
         treatAsMovie: Boolean,
     ): Result<WebDavMatch> {
         val sourceId = folderKey.substringBefore('|')
@@ -521,6 +559,23 @@ object WebDavLibraryRepository {
         val contentId = pickContentId(arm, contentType, hit)
             ?: return Result.failure(IllegalStateException("No id mapping exists for ${hit.title}."))
 
+        // Same view of the item a scan takes, so the row reads like the details page.
+        val meta = fetchMeta(contentType, contentId)
+        val isSeries = contentType == WebDavMatch.CONTENT_TYPE_SERIES
+        val folder = WebDavIndex.folders(sourceId).firstOrNull { it.key == folderKey }
+        val placement = if (isSeries && folder != null) {
+            placeFolder(
+                folder = folder,
+                parsed = AnimeReleaseParser.parseFolder(folder.name),
+                parsedSeason = null,
+                mapperSeason = season,
+                entryStartEpochSeconds = null,
+                meta = meta,
+            ).takeIf { it.season == season }
+        } else {
+            null
+        }
+
         val match = WebDavMatch(
             folderKey = folderKey,
             sourceId = sourceId,
@@ -529,8 +584,10 @@ object WebDavLibraryRepository {
             contentType = contentType,
             title = hit.title,
             poster = hit.poster,
-            season = season ?: arm?.season,
-            episodeOffset = episodeOffset,
+            metaName = meta?.name,
+            metaPoster = meta?.poster,
+            season = season.takeIf { isSeries },
+            episodeOffset = placement?.episodeOffset ?: 0,
             step = PlacementStep.Manual.name,
             confidence = 1f,
             userSet = true,
