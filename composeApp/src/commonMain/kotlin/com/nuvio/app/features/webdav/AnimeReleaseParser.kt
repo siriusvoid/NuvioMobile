@@ -29,6 +29,25 @@ object AnimeReleaseParser {
     private val LEFTOVER_DASH_NUMBER = Regex("""\s-\s*\d{1,4}\s*$""")
     private val REPEATED_SPACE = Regex("""\s{2,}""")
     private val SEPARATOR_RUN = Regex("""[._]+""")
+    private val POSSESSIVE = Regex("""['’]s\b""")
+
+    /**
+     * Latin letters with the marks romanised titles carry, folded onto the plain
+     * letter. A table rather than Unicode decomposition, which Kotlin/Native lacks.
+     */
+    private val FOLDED_LETTERS: Map<Char, Char> = buildMap {
+        fun fold(plain: Char, marked: String) = marked.forEach { put(it, plain) }
+        fold('a', "āáàâäãåăą")
+        fold('c', "çćč")
+        fold('e', "ēéèêëėęě")
+        fold('i', "īíìîïı")
+        fold('n', "ñńň")
+        fold('o', "ōóòôöõøő")
+        fold('s', "śšş")
+        fold('u', "ūúùûüůű")
+        fold('y', "ýÿ")
+        fold('z', "źżž")
+    }
 
     private val ROMAN_SEASONS = mapOf(
         "ii" to 2, "iii" to 3, "iv" to 4, "v" to 5, "vi" to 6,
@@ -311,12 +330,17 @@ object AnimeReleaseParser {
         return title.trim()
     }
 
-    /** Comparison form: lowercase alphanumeric words, used for scoring and cache keys. */
+    /**
+     * Comparison form: lowercase unaccented words, used for scoring and cache keys.
+     * The databases disagree about both accents ("Shōjo" vs "Shojo") and possessives
+     * ("Hell's Paradise" vs "Hell Paradise"), and a release name rarely has either.
+     */
     fun normalizeForCompare(value: String): String =
         value
             .replace('×', 'x')
             .lowercase()
-            .map { if (it.isLetterOrDigit()) it else ' ' }
+            .replace(POSSESSIVE, " ")
+            .map { if (it.isLetterOrDigit()) FOLDED_LETTERS[it] ?: it else ' ' }
             .joinToString("")
             .split(' ')
             .filter { it.isNotBlank() }
