@@ -3,10 +3,12 @@ import SwiftUI
 import WidgetKit
 
 struct DownloadsLiveActivityAttributes: ActivityAttributes {
+    // Must match the app's copy in DownloadsLiveActivityManager field for field.
     public struct ContentState: Codable, Hashable {
         let status: String
         let progressPercent: Int
         let transferredText: String
+        let detailText: String?
     }
 
     let downloadId: String
@@ -43,7 +45,7 @@ struct DownloadsLiveActivityWidget: Widget {
                             .lineLimit(1)
                             .minimumScaleFactor(0.86)
                             .truncationMode(.tail)
-                        Text(context.attributes.subtitle)
+                        Text(context.state.detailText ?? context.attributes.subtitle)
                             .font(.caption)
                             .foregroundStyle(.white.opacity(0.82))
                             .lineLimit(1)
@@ -119,7 +121,7 @@ private struct DownloadActivityLockScreenView: View {
                             .font(.headline.weight(.semibold))
                             .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text(context.attributes.subtitle)
+                        Text(context.state.detailText ?? context.attributes.subtitle)
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.82))
                             .lineLimit(2)

@@ -75,7 +75,8 @@ final class DownloadsLiveActivityManager {
         let state = DownloadsLiveActivityAttributes.ContentState(
             status: payload.status,
             progressPercent: payload.progressPercent,
-            transferredText: transferredText(payload)
+            transferredText: transferredText(payload),
+            detailText: payload.detail
         )
 
         if let existing, existing.attributes.downloadId == payload.id {
@@ -120,10 +121,13 @@ final class DownloadsLiveActivityManager {
 #if canImport(ActivityKit) && os(iOS) && !targetEnvironment(macCatalyst)
 @available(iOS 16.1, *)
 struct DownloadsLiveActivityAttributes: ActivityAttributes {
+    // Must match the widget extension's copy field for field: ActivityKit
+    // passes this between the two processes as encoded data.
     public struct ContentState: Codable, Hashable {
         let status: String
         let progressPercent: Int
         let transferredText: String
+        let detailText: String?
     }
 
     let downloadId: String
@@ -140,4 +144,5 @@ private struct DownloadsLiveStatusPayload: Decodable {
     let downloadedBytes: Int64
     let totalBytes: Int64?
     let progressPercent: Int
+    let detail: String?
 }
