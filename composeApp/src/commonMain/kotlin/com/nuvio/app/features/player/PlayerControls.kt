@@ -43,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -629,6 +630,9 @@ internal fun PlayerSeekBar(
 ) {
     val seekDurationMs = durationMs.coerceAtLeast(1L)
     val seekDescription = stringResource(Res.string.player_seek_position)
+    // A tap reports the new value and finishes in the same frame, before
+    // displayedPositionMs recomposes, so the finish seeks to what was last reported.
+    val scrubTargetMs = remember { mutableStateOf<Long?>(null) }
 
     // White stays visible over the accent-colored played fill; light purple only on the White theme (white would vanish on its near-white fill).
     val accentColor = MaterialTheme.colorScheme.primary
@@ -648,8 +652,16 @@ internal fun PlayerSeekBar(
                 .graphicsLayer(scaleY = metrics.sliderScaleY)
                 .semantics { contentDescription = seekDescription },
             value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
-            onValueChange = { value -> onScrubChange(value.toLong()) },
-            onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
+            onValueChange = { value ->
+                val positionMs = value.toLong()
+                scrubTargetMs.value = positionMs
+                onScrubChange(positionMs)
+            },
+            onValueChangeFinished = {
+                val targetMs = scrubTargetMs.value ?: displayedPositionMs
+                scrubTargetMs.value = null
+                onScrubFinished(targetMs.coerceIn(0L, seekDurationMs))
+            },
             enabled = durationMs > 0L,
             valueRange = 0f..seekDurationMs.toFloat(),
             track = { sliderState ->
