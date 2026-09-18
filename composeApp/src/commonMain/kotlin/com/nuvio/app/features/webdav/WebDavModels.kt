@@ -180,5 +180,16 @@ data class WebDavUiState(
 
 sealed interface WebDavConnectionResult {
     data class Success(val entryCount: Int) : WebDavConnectionResult
-    data class Failure(val message: String) : WebDavConnectionResult
+    data class Failure(val message: String, val cause: Throwable? = null) : WebDavConnectionResult
 }
+
+/**
+ * A server that answered with an error status. [message] is the full sentence the
+ * scan shows; the parts stay separate so a form can lead with the plain reason.
+ */
+internal class WebDavHttpException(
+    val status: Int,
+    val explanation: String,
+    val serverMessage: String?,
+    message: String,
+) : IllegalStateException(message)

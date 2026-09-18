@@ -75,7 +75,6 @@ import com.nuvio.app.features.home.HomeCatalogSettingsItem
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.buildAddonCatalogRefreshSignature
 import com.nuvio.app.features.mdblist.MdbListSettings
-import com.nuvio.app.features.webdav.MatchReviewRow
 import com.nuvio.app.features.webdav.WebDavLibraryRepository
 import com.nuvio.app.features.webdav.WebDavUiState
 import com.nuvio.app.features.mdblist.MdbListSettingsRepository
@@ -115,6 +114,13 @@ private fun SettingsPage.isEnabledByPolicy(): Boolean =
         SettingsPage.SupportersContributors -> AppFeaturePolicy.supportersContributorsPageEnabled
         else -> true
     }
+
+/** Pages that show a single source or pack take its name as their title. */
+private fun SettingsPage.itemTitle(): String? = when (this) {
+    SettingsPage.WebDavSource -> webDavSelectedSourceName()
+    SettingsPage.ImportedSubtitlePack -> importedSubtitleSelectedPackName()
+    else -> null
+}
 
 @Composable
 private fun settingsPageTitles(): Map<SettingsPage, String> {
@@ -200,19 +206,6 @@ fun SettingsScreen(
             WebDavLibraryRepository.initialize()
             WebDavLibraryRepository.uiState
         }.collectAsStateWithLifecycle()
-        var webDavReviewSourceId by rememberSaveable { mutableStateOf<String?>(null) }
-        var webDavReviewRefreshToken by remember { mutableStateOf(0) }
-        var webDavReviewRows by remember { mutableStateOf<List<MatchReviewRow>>(emptyList()) }
-        val onWebDavReviewSourceChange: (String) -> Unit = { webDavReviewSourceId = it }
-        val onWebDavReviewRefresh: () -> Unit = { webDavReviewRefreshToken++ }
-        LaunchedEffect(webDavReviewSourceId, webDavReviewRefreshToken, webDavState.sources) {
-            val sourceId = webDavReviewSourceId
-            webDavReviewRows = if (sourceId == null) {
-                emptyList()
-            } else {
-                WebDavLibraryRepository.reviewRows(sourceId)
-            }
-        }
         val traktAuthUiState by remember {
             TraktAuthRepository.ensureLoaded()
             TraktAuthRepository.uiState
@@ -308,7 +301,7 @@ fun SettingsScreen(
             }
             externalNavigator(
                 targetPage.name,
-                pageTitles.getValue(targetPage),
+                targetPage.itemTitle() ?: pageTitles.getValue(targetPage),
             )
         }
 
@@ -445,10 +438,6 @@ fun SettingsScreen(
                         mdbListSettings = mdbListSettings,
                         debridSettings = debridSettings,
                         webDavState = webDavState,
-                        webDavReviewSourceId = webDavReviewSourceId,
-                        webDavReviewRows = webDavReviewRows,
-                        onWebDavReviewSourceChange = onWebDavReviewSourceChange,
-                        onWebDavReviewRefresh = onWebDavReviewRefresh,
                         traktAuthUiState = traktAuthUiState,
                         simklAuthUiState = simklAuthUiState,
                         traktCommentsEnabled = traktCommentsEnabled,
@@ -515,10 +504,6 @@ fun SettingsScreen(
                         mdbListSettings = mdbListSettings,
                         debridSettings = debridSettings,
                         webDavState = webDavState,
-                        webDavReviewSourceId = webDavReviewSourceId,
-                        webDavReviewRows = webDavReviewRows,
-                        onWebDavReviewSourceChange = onWebDavReviewSourceChange,
-                        onWebDavReviewRefresh = onWebDavReviewRefresh,
                         traktAuthUiState = traktAuthUiState,
                         simklAuthUiState = simklAuthUiState,
                         traktCommentsEnabled = traktCommentsEnabled,
@@ -597,10 +582,6 @@ private fun MobileSettingsScreen(
     mdbListSettings: MdbListSettings,
     debridSettings: DebridSettings,
     webDavState: WebDavUiState,
-    webDavReviewSourceId: String?,
-    webDavReviewRows: List<MatchReviewRow>,
-    onWebDavReviewSourceChange: (String) -> Unit,
-    onWebDavReviewRefresh: () -> Unit,
     traktAuthUiState: TraktAuthUiState,
     simklAuthUiState: SimklAuthUiState,
     traktCommentsEnabled: Boolean,
@@ -699,7 +680,7 @@ private fun MobileSettingsScreen(
                 stickyHeader {
                     val previousPage = page.previousPage()
                     NuvioScreenHeader(
-                        title = stringResource(page.titleRes),
+                        title = page.itemTitle() ?: stringResource(page.titleRes),
                         onBack = previousPage?.let { { onNavigateBack() } },
                     )
                 }
@@ -785,6 +766,11 @@ private fun MobileSettingsScreen(
                 )
                 SettingsPage.ImportedSubtitles -> importedSubtitlesContent(
                     isTablet = false,
+                    onPackClick = { onPageChange(SettingsPage.ImportedSubtitlePack) },
+                )
+                SettingsPage.ImportedSubtitlePack -> importedSubtitlePackContent(
+                    isTablet = false,
+                    onDeleted = onNavigateBack,
                 )
                 SettingsPage.Streams -> streamsSettingsContent(
                     isTablet = false,
@@ -866,16 +852,17 @@ private fun MobileSettingsScreen(
                 SettingsPage.WebDavLibrary -> webDavSettingsContent(
                     isTablet = false,
                     state = webDavState,
-                    onReviewClick = { sourceId ->
-                        onWebDavReviewSourceChange(sourceId)
-                        onPageChange(SettingsPage.WebDavReview)
-                    },
+                    onSourceClick = { onPageChange(SettingsPage.WebDavSource) },
+                )
+                SettingsPage.WebDavSource -> webDavSourceContent(
+                    isTablet = false,
+                    state = webDavState,
+                    onReviewClick = { onPageChange(SettingsPage.WebDavReview) },
+                    onRemoved = onNavigateBack,
                 )
                 SettingsPage.WebDavReview -> webDavReviewContent(
                     isTablet = false,
-                    sourceId = webDavReviewSourceId,
-                    rows = webDavReviewRows,
-                    onChanged = onWebDavReviewRefresh,
+                    state = webDavState,
                 )
                 SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                     isTablet = false,
@@ -990,10 +977,6 @@ private fun TabletSettingsScreen(
     mdbListSettings: MdbListSettings,
     debridSettings: DebridSettings,
     webDavState: WebDavUiState,
-    webDavReviewSourceId: String?,
-    webDavReviewRows: List<MatchReviewRow>,
-    onWebDavReviewSourceChange: (String) -> Unit,
-    onWebDavReviewRefresh: () -> Unit,
     traktAuthUiState: TraktAuthUiState,
     simklAuthUiState: SimklAuthUiState,
     traktCommentsEnabled: Boolean,
@@ -1151,7 +1134,7 @@ private fun TabletSettingsScreen(
                                     stringResource(Res.string.compose_settings_page_root)
                                 }
                             } else {
-                                stringResource(page.titleRes)
+                                page.itemTitle() ?: stringResource(page.titleRes)
                             },
                             showBack = previousPage != null,
                             onBack = onNavigateBack,
@@ -1240,6 +1223,11 @@ private fun TabletSettingsScreen(
                     )
                     SettingsPage.ImportedSubtitles -> importedSubtitlesContent(
                         isTablet = true,
+                        onPackClick = { onPageChange(SettingsPage.ImportedSubtitlePack) },
+                    )
+                    SettingsPage.ImportedSubtitlePack -> importedSubtitlePackContent(
+                        isTablet = true,
+                        onDeleted = onNavigateBack,
                     )
                     SettingsPage.Streams -> streamsSettingsContent(
                         isTablet = true,
@@ -1321,16 +1309,17 @@ private fun TabletSettingsScreen(
                     SettingsPage.WebDavLibrary -> webDavSettingsContent(
                         isTablet = true,
                         state = webDavState,
-                        onReviewClick = { sourceId ->
-                            onWebDavReviewSourceChange(sourceId)
-                            onPageChange(SettingsPage.WebDavReview)
-                        },
+                        onSourceClick = { onPageChange(SettingsPage.WebDavSource) },
+                    )
+                    SettingsPage.WebDavSource -> webDavSourceContent(
+                        isTablet = true,
+                        state = webDavState,
+                        onReviewClick = { onPageChange(SettingsPage.WebDavReview) },
+                        onRemoved = onNavigateBack,
                     )
                     SettingsPage.WebDavReview -> webDavReviewContent(
                         isTablet = true,
-                        sourceId = webDavReviewSourceId,
-                        rows = webDavReviewRows,
-                        onChanged = onWebDavReviewRefresh,
+                        state = webDavState,
                     )
                     SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                         isTablet = true,
