@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Home

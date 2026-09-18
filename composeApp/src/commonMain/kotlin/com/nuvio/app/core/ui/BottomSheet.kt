@@ -104,6 +104,8 @@ fun NuvioBottomSheetActionRow(
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
     selected: Boolean = false,
+    /** Secondary text right after the title, on the same line; shortened first when space runs out. */
+    detail: String? = null,
     trailingContent: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val tokens = MaterialTheme.nuvio
@@ -135,15 +137,39 @@ fun NuvioBottomSheetActionRow(
                 )
             }
         }
-        Text(
-            text = title,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = if (selected) FontWeight.SemiBold else null,
-            color = tokens.colors.textPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        if (detail == null) {
+            Text(
+                text = title,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (selected) FontWeight.SemiBold else null,
+                color = tokens.colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s8),
+            ) {
+                Text(
+                    text = title,
+                    modifier = Modifier.alignByBaseline(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (selected) FontWeight.SemiBold else null,
+                    color = tokens.colors.textPrimary,
+                    maxLines = 1,
+                )
+                Text(
+                    text = detail,
+                    modifier = Modifier.alignByBaseline().weight(1f, fill = false),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = tokens.colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         trailingContent?.invoke(this)
     }
 }
