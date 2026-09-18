@@ -1,6 +1,7 @@
 package com.nuvio.app.features.player
 
 import com.nuvio.app.core.build.AppFeaturePolicy
+import com.nuvio.app.features.player.skip.AutoSkipSegmentType
 import com.nuvio.app.features.player.skip.NextEpisodeThresholdMode
 import com.nuvio.app.features.streams.StreamAutoPlayMode
 import com.nuvio.app.features.streams.StreamAutoPlaySource
@@ -32,6 +33,7 @@ fun snapToAllowedTimeout(value: Int): Int {
 }
 
 data class PlayerSettingsUiState(
+    val useLegacyPlayerLayout: Boolean = false,
     val showLoadingOverlay: Boolean = true,
     val showPlayerLoadingStatus: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
@@ -65,9 +67,7 @@ data class PlayerSettingsUiState(
     val streamAutoPlayRegex: String = "",
     val streamAutoPlayTimeoutSeconds: Int = 3,
     val skipIntroEnabled: Boolean = true,
-    val autoSkipIntroEnabled: Boolean = false,
-    val autoSkipRecapEnabled: Boolean = false,
-    val autoSkipOutroEnabled: Boolean = false,
+    val autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet(),
     val animeSkipEnabled: Boolean = false,
     val animeSkipClientId: String = "",
     val introDbApiKey: String = "",
@@ -103,6 +103,7 @@ object PlayerSettingsRepository {
     val uiState: StateFlow<PlayerSettingsUiState> = _uiState.asStateFlow()
 
     private var hasLoaded = false
+    private var useLegacyPlayerLayout = false
     private var showLoadingOverlay = true
     private var showPlayerLoadingStatus = true
     private var pauseOverlayEnabled = true
@@ -136,9 +137,7 @@ object PlayerSettingsRepository {
     private var streamAutoPlayRegex = ""
     private var streamAutoPlayTimeoutSeconds = 3
     private var skipIntroEnabled = true
-    private var autoSkipIntroEnabled = false
-    private var autoSkipRecapEnabled = false
-    private var autoSkipOutroEnabled = false
+    private var autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet()
     private var animeSkipEnabled = false
     private var animeSkipClientId = ""
     private var introDbApiKey = ""
@@ -179,6 +178,7 @@ object PlayerSettingsRepository {
 
     fun clearLocalState() {
         hasLoaded = false
+        useLegacyPlayerLayout = false
         showLoadingOverlay = true
         showPlayerLoadingStatus = true
         pauseOverlayEnabled = true
@@ -212,9 +212,7 @@ object PlayerSettingsRepository {
         streamAutoPlayRegex = ""
         streamAutoPlayTimeoutSeconds = 3
         skipIntroEnabled = true
-        autoSkipIntroEnabled = false
-        autoSkipRecapEnabled = false
-        autoSkipOutroEnabled = false
+        autoSkipSegmentTypes = emptySet()
         animeSkipEnabled = false
         animeSkipClientId = ""
         introDbApiKey = ""
@@ -248,6 +246,7 @@ object PlayerSettingsRepository {
 
     private fun loadFromDisk() {
         hasLoaded = true
+        useLegacyPlayerLayout = PlayerSettingsStorage.loadUseLegacyPlayerLayout() ?: false
         showLoadingOverlay = PlayerSettingsStorage.loadShowLoadingOverlay() ?: true
         showPlayerLoadingStatus = PlayerSettingsStorage.loadShowPlayerLoadingStatus() ?: true
         pauseOverlayEnabled = PlayerSettingsStorage.loadPauseOverlayEnabled() ?: true
@@ -340,9 +339,10 @@ object PlayerSettingsRepository {
             PlayerSettingsStorage.saveStreamAutoPlayTimeoutSeconds(streamAutoPlayTimeoutSeconds)
         }
         skipIntroEnabled = PlayerSettingsStorage.loadSkipIntroEnabled() ?: true
-        autoSkipIntroEnabled = PlayerSettingsStorage.loadAutoSkipIntroEnabled() ?: false
-        autoSkipRecapEnabled = PlayerSettingsStorage.loadAutoSkipRecapEnabled() ?: false
-        autoSkipOutroEnabled = PlayerSettingsStorage.loadAutoSkipOutroEnabled() ?: false
+        autoSkipSegmentTypes = PlayerSettingsStorage.loadAutoSkipSegmentTypes()
+            ?.mapNotNull(AutoSkipSegmentType::fromStoredValue)?.toSet() ?: buildSet {
+                if (PlayerSettingsStorage.loadAutoSkipMovieCredits() == true) add(AutoSkipSegmentType.MOVIE_CREDITS)
+            }
         animeSkipEnabled = PlayerSettingsStorage.loadAnimeSkipEnabled() ?: false
         animeSkipClientId = PlayerSettingsStorage.loadAnimeSkipClientId() ?: ""
         introDbApiKey = PlayerSettingsStorage.loadIntroDbApiKey() ?: ""
@@ -384,6 +384,14 @@ object PlayerSettingsRepository {
         iosSaturation = PlayerSettingsStorage.loadIosSaturation() ?: 0
         iosGamma = PlayerSettingsStorage.loadIosGamma() ?: 0
         publish()
+    }
+
+    fun setUseLegacyPlayerLayout(enabled: Boolean) {
+        ensureLoaded()
+        if (useLegacyPlayerLayout == enabled) return
+        useLegacyPlayerLayout = enabled
+        publish()
+        PlayerSettingsStorage.saveUseLegacyPlayerLayout(enabled)
     }
 
     fun setShowLoadingOverlay(enabled: Boolean) {
@@ -677,28 +685,13 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveSkipIntroEnabled(enabled)
     }
 
-    fun setAutoSkipIntroEnabled(enabled: Boolean) {
+    fun setAutoSkipSegmentTypeEnabled(segmentType: AutoSkipSegmentType, enabled: Boolean) {
         ensureLoaded()
-        if (autoSkipIntroEnabled == enabled) return
-        autoSkipIntroEnabled = enabled
+        val updated = if (enabled) autoSkipSegmentTypes + segmentType else autoSkipSegmentTypes - segmentType
+        if (autoSkipSegmentTypes == updated) return
+        autoSkipSegmentTypes = updated
         publish()
-        PlayerSettingsStorage.saveAutoSkipIntroEnabled(enabled)
-    }
-
-    fun setAutoSkipRecapEnabled(enabled: Boolean) {
-        ensureLoaded()
-        if (autoSkipRecapEnabled == enabled) return
-        autoSkipRecapEnabled = enabled
-        publish()
-        PlayerSettingsStorage.saveAutoSkipRecapEnabled(enabled)
-    }
-
-    fun setAutoSkipOutroEnabled(enabled: Boolean) {
-        ensureLoaded()
-        if (autoSkipOutroEnabled == enabled) return
-        autoSkipOutroEnabled = enabled
-        publish()
-        PlayerSettingsStorage.saveAutoSkipOutroEnabled(enabled)
+        PlayerSettingsStorage.saveAutoSkipSegmentTypes(updated.mapTo(linkedSetOf()) { it.storedValue })
     }
 
     fun setAnimeSkipEnabled(enabled: Boolean) {
@@ -972,6 +965,7 @@ object PlayerSettingsRepository {
 
     private fun publish() {
         _uiState.value = PlayerSettingsUiState(
+            useLegacyPlayerLayout = useLegacyPlayerLayout,
             showLoadingOverlay = showLoadingOverlay,
             showPlayerLoadingStatus = showPlayerLoadingStatus,
             pauseOverlayEnabled = pauseOverlayEnabled,
@@ -1005,9 +999,7 @@ object PlayerSettingsRepository {
             streamAutoPlayRegex = streamAutoPlayRegex,
             streamAutoPlayTimeoutSeconds = streamAutoPlayTimeoutSeconds,
             skipIntroEnabled = skipIntroEnabled,
-            autoSkipIntroEnabled = autoSkipIntroEnabled,
-            autoSkipRecapEnabled = autoSkipRecapEnabled,
-            autoSkipOutroEnabled = autoSkipOutroEnabled,
+            autoSkipSegmentTypes = autoSkipSegmentTypes,
             animeSkipEnabled = animeSkipEnabled,
             animeSkipClientId = animeSkipClientId,
             introDbApiKey = introDbApiKey,

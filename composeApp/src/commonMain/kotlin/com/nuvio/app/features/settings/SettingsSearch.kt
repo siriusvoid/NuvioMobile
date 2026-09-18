@@ -576,6 +576,11 @@ internal fun settingsSearchEntries(
         icon = Icons.Rounded.PlayArrow,
         rows = listOfNotNull(
             PlaybackSearchRow(
+                "legacy-player-layout",
+                stringResource(Res.string.settings_playback_legacy_layout),
+                stringResource(Res.string.settings_playback_legacy_layout_description),
+            ),
+            PlaybackSearchRow(
                 "loading-overlay",
                 stringResource(Res.string.settings_playback_show_loading_overlay),
                 stringResource(Res.string.settings_playback_show_loading_overlay_description),
@@ -677,9 +682,6 @@ internal fun settingsSearchEntries(
         icon = Icons.Rounded.PlayArrow,
         rows = listOf(
             PlaybackSearchRow("skip-intro", stringResource(Res.string.settings_playback_skip_intro_outro_recap), stringResource(Res.string.settings_playback_skip_intro_outro_recap_description)),
-            PlaybackSearchRow("auto-skip-intro", stringResource(Res.string.settings_playback_auto_skip_intro), stringResource(Res.string.settings_playback_auto_skip_intro_description)),
-            PlaybackSearchRow("auto-skip-recap", stringResource(Res.string.settings_playback_auto_skip_recap), stringResource(Res.string.settings_playback_auto_skip_recap_description)),
-            PlaybackSearchRow("auto-skip-outro", stringResource(Res.string.settings_playback_auto_skip_outro), stringResource(Res.string.settings_playback_auto_skip_outro_description)),
             PlaybackSearchRow("anime-skip", stringResource(Res.string.settings_playback_anime_skip), stringResource(Res.string.settings_playback_anime_skip_description)),
             PlaybackSearchRow("anime-skip-client", stringResource(Res.string.settings_playback_anime_skip_client_id), stringResource(Res.string.settings_playback_anime_skip_client_id_description)),
             PlaybackSearchRow("intro-submit", stringResource(Res.string.settings_playback_intro_submit_enabled), stringResource(Res.string.settings_playback_intro_submit_enabled_description)),
@@ -804,9 +806,24 @@ internal fun settingsSearchEntries(
     listOf(
         PlaybackSearchRow("meta-background-mode", stringResource(Res.string.settings_meta_background_mode), stringResource(Res.string.settings_meta_background_mode_description)),
         PlaybackSearchRow("meta-tabs", stringResource(Res.string.settings_meta_tab_layout), stringResource(Res.string.settings_meta_tab_layout_description)),
+        PlaybackSearchRow(
+            "meta-overall-ratings",
+            stringResource(Res.string.layout_overall_ratings),
+            stringResource(Res.string.layout_overall_ratings_sub_on) + " " +
+                stringResource(Res.string.layout_overall_ratings_sub_off),
+        ),
+        PlaybackSearchRow(
+            "meta-episode-ratings",
+            stringResource(Res.string.layout_episode_ratings),
+            listOf(
+                stringResource(Res.string.layout_episode_ratings_sub),
+                stringResource(Res.string.layout_ratings_show),
+                stringResource(Res.string.layout_ratings_hide),
+                stringResource(Res.string.layout_ratings_hide_unwatched),
+            ).joinToString(" "),
+        ),
         PlaybackSearchRow("meta-episode-cards", stringResource(Res.string.settings_meta_episode_cards), stringResource(Res.string.settings_meta_episode_cards_description)),
         PlaybackSearchRow("meta-blur-episodes", stringResource(Res.string.settings_meta_blur_unwatched_episodes), stringResource(Res.string.settings_meta_blur_unwatched_episodes_description)),
-        PlaybackSearchRow("meta-show-imdb-ratings", stringResource(Res.string.settings_meta_show_imdb_ratings), stringResource(Res.string.settings_meta_show_imdb_ratings_description)),
     ).forEach { row ->
         addRow(
             page = SettingsPage.MetaScreen,

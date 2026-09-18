@@ -105,8 +105,6 @@ import nuvio.composeapp.generated.resources.settings_meta_poster_transition
 import nuvio.composeapp.generated.resources.settings_meta_poster_transition_description
 import nuvio.composeapp.generated.resources.settings_meta_section_appearance
 import nuvio.composeapp.generated.resources.settings_meta_section_sections
-import nuvio.composeapp.generated.resources.settings_meta_show_imdb_ratings
-import nuvio.composeapp.generated.resources.settings_meta_show_imdb_ratings_description
 import nuvio.composeapp.generated.resources.settings_meta_tab_group_format
 import nuvio.composeapp.generated.resources.settings_meta_tab_layout
 import nuvio.composeapp.generated.resources.settings_meta_tab_layout_description
@@ -164,6 +162,8 @@ internal fun LazyListScope.metaScreenSettingsContent(
                     onCheckedChange = { MetaScreenSettingsRepository.setTabLayout(it) },
                 )
                 SettingsGroupDivider(isTablet = isTablet)
+                RatingsSettings(isTablet = isTablet, uiState = uiState)
+                SettingsGroupDivider(isTablet = isTablet)
                 MetaEpisodeCardStyleSelector(
                     isTablet = isTablet,
                     selectedStyle = uiState.episodeCardStyle,
@@ -176,14 +176,6 @@ internal fun LazyListScope.metaScreenSettingsContent(
                     checked = uiState.blurUnwatchedEpisodes,
                     isTablet = isTablet,
                     onCheckedChange = { MetaScreenSettingsRepository.setBlurUnwatchedEpisodes(it) },
-                )
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsSwitchRow(
-                    title = stringResource(Res.string.settings_meta_show_imdb_ratings),
-                    description = stringResource(Res.string.settings_meta_show_imdb_ratings_description),
-                    checked = uiState.showImdbRatings,
-                    isTablet = isTablet,
-                    onCheckedChange = { MetaScreenSettingsRepository.setShowImdbRatings(it) },
                 )
             }
         }
@@ -658,7 +650,7 @@ private fun MetaEpisodeCardStylePreview(
                         .width(128.dp)
                         .height(80.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Box(
                         modifier = Modifier
@@ -694,7 +686,7 @@ private fun MetaEpisodeCardStylePreview(
                         .width(132.dp)
                         .height(78.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.78f)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     Box(
                         modifier = Modifier
