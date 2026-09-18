@@ -234,6 +234,15 @@ object DownloadsRepository {
         }
     }
 
+    fun pauseDownloads(downloadIds: Collection<String>) {
+        downloadIds.forEach(::pauseDownload)
+    }
+
+    /** Resumes paused and failed downloads; the queue then takes them in episode order. */
+    fun resumeDownloads(downloadIds: Collection<String>) {
+        downloadIds.forEach(::resumeDownload)
+    }
+
     fun resumeDownload(downloadId: String) {
         ensureLoaded()
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return

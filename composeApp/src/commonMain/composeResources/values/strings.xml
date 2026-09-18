@@ -628,6 +628,8 @@
     <string name="downloads_open_directory_failed">Couldn&apos;t open downloads folder</string>
     <string name="downloads_delete_show">Delete all episodes</string>
     <string name="downloads_delete_season">Delete season</string>
+    <string name="downloads_pause_all">Pause all</string>
+    <string name="downloads_resume_all">Resume all</string>
     <string name="downloads_delete_frees_space">%1$s will be freed</string>
     <plurals name="downloads_delete_episodes_title">
         <item quantity="one">Delete %1$d episode?</item>

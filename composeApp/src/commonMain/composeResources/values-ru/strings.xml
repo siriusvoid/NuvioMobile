@@ -621,6 +621,8 @@
     <string name="downloads_open_directory_failed">Не удалось открыть папку загрузок</string>
     <string name="downloads_delete_show">Удалить все серии</string>
     <string name="downloads_delete_season">Удалить сезон</string>
+    <string name="downloads_pause_all">Приостановить все</string>
+    <string name="downloads_resume_all">Продолжить все</string>
     <string name="downloads_delete_frees_space">Освободится %1$s</string>
     <plurals name="downloads_delete_episodes_title">
         <item quantity="one">Удалить %1$d серию?</item>
