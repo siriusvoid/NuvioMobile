@@ -178,6 +178,18 @@ internal class WebDavScanner(
         val subtitles: List<WebDavFile>,
     )
 
+    /**
+     * Lists one folder again, whatever its modified time says. A debrid folder can
+     * keep its modified time while files are still being added to it, so a saved
+     * listing can stay short. Null when nothing could be read, so a failed request
+     * never wipes a saved listing.
+     */
+    suspend fun relistFolder(folder: WebDavFolder): WebDavFolder? {
+        val collected = collectFiles(path = folder.path, depth = 0)
+        if (collected.videos.isEmpty()) return null
+        return folder.copy(files = collected.videos, subtitles = collected.subtitles)
+    }
+
     /** Walks one torrent folder. Season packs sometimes nest, so a little depth is allowed. */
     private suspend fun collectFiles(path: String, depth: Int): CollectedFiles {
         if (depth > MAX_FOLDER_DEPTH) return CollectedFiles(emptyList(), emptyList())
