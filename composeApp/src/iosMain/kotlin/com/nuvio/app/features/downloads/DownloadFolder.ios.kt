@@ -49,6 +49,10 @@ internal actual object DownloadFolder {
     /** Where downloads are saved now: the chosen folder while it can be reached, otherwise app storage. */
     fun directoryPath(): String = chosen.value?.path ?: appStorageDirectoryPath()
 
+    /** A folder was chosen but can't be reached right now, so app storage stands in for it. */
+    fun isChosenFolderUnavailable(): Boolean =
+        chosen.value == null && NSUserDefaults.standardUserDefaults.dataForKey(bookmarkKey) != null
+
     /** Returns false, keeping the current folder, when [url] can't be written to or remembered. */
     fun choose(url: NSURL): Boolean {
         val accessed = url.startAccessingSecurityScopedResource()

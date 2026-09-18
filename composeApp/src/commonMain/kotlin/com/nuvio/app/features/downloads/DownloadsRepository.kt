@@ -277,6 +277,28 @@ object DownloadsRepository {
         persist()
     }
 
+    /**
+     * Drops downloads deleted outside the app, in the Files app for example: finished
+     * ones whose file is gone, and paused or failed ones whose folder is gone, along
+     * with what is left of their subtitles, partial data and folder.
+     */
+    fun pruneMissingFiles() {
+        ensureLoaded()
+        val gone = _uiState.value.items.filter { item ->
+            when (item.status) {
+                DownloadStatus.Completed -> DownloadsPlatformDownloader.isFileGone(item.localFileUri, item.fileName)
+                DownloadStatus.Paused, DownloadStatus.Failed -> DownloadsPlatformDownloader.isFolderGone(item.fileName)
+                DownloadStatus.Downloading -> false
+            }
+        }
+        if (gone.isEmpty()) return
+
+        gone.forEach { DownloadsPlatformDownloader.removePartialFile(it.fileName) }
+        val goneIds = gone.mapTo(mutableSetOf()) { it.id }
+        publish(_uiState.value.items.filterNot { it.id in goneIds })
+        persist()
+    }
+
     /** Deletes several downloads, their files and subtitles with them, in one update. */
     fun deleteDownloads(downloadIds: Collection<String>) {
         ensureLoaded()
@@ -321,6 +343,7 @@ object DownloadsRepository {
         }
         normalized.filter { it.status == DownloadStatus.Downloading && it.id !in activeHandles }
             .forEach(::startDownload)
+        pruneMissingFiles()
     }
 
     private fun startDownload(item: DownloadItem) {

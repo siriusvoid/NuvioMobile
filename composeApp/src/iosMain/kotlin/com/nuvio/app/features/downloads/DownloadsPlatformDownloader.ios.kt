@@ -138,6 +138,32 @@ internal actual object DownloadsPlatformDownloader {
             ?.toFileUri()
     }
 
+    actual fun isFileGone(localFileUri: String?, destinationFileName: String): Boolean {
+        if (resolveLocalFileUri(localFileUri, destinationFileName) != null) return false
+        val path = localFileUri?.toLocalPath() ?: return false
+        val manager = NSFileManager.defaultManager
+
+        // iCloud Drive offloads a file and leaves `.name.icloud` in its place.
+        val name = path.substringAfterLast('/')
+        if (manager.fileExistsAtPath("${path.substringBeforeLast('/')}/.$name.icloud")) return false
+
+        // The folder it was saved into must be reachable, or nothing is known about the
+        // file. App storage always is — under a new container path after an app update,
+        // which the lookup above has already tried. A chosen folder may not be (a drive
+        // unplugged), so its own path is checked.
+        if (path.contains("/Documents/nuvio_downloads/")) return true
+        val downloadsRoot = path.removeSuffix("/${destinationFileName.trim()}")
+        if (downloadsRoot == path || !manager.fileExistsAtPath(downloadsRoot)) return false
+        return true
+    }
+
+    actual fun isFolderGone(destinationFileName: String): Boolean {
+        val folder = destinationFileName.substringBeforeLast('/', missingDelimiterValue = "")
+        // Flat names from before per-show folders, or a chosen folder out of reach.
+        if (folder.isBlank() || DownloadFolder.isChosenFolderUnavailable()) return false
+        return !NSFileManager.defaultManager.fileExistsAtPath("${DownloadFolder.directoryPath()}/$folder")
+    }
+
     actual fun openDownloadsDirectory(): Boolean {
         val url = NSURL.fileURLWithPath(DownloadFolder.directoryPath())
         UIApplication.sharedApplication.openURL(
