@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.nuvioTypeScale
+import com.nuvio.app.features.player.skip.SkipInterval
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -110,12 +111,14 @@ internal fun PlayerTimeline(
     onScrubFinished: (Long) -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    segments: List<SkipInterval> = emptyList(),
 ) {
     val durationMs = snapshot.durationMs.coerceAtLeast(0L)
     val rangeEnd = durationMs.coerceAtLeast(1L).toFloat()
     val bufferedFraction = (snapshot.bufferedPositionMs.toFloat() / rangeEnd).coerceIn(0f, 1f)
     val accent = MaterialTheme.colorScheme.primary
     val accentBrush = MaterialTheme.themePalette.accentBrush()
+    val segmentMarkerColor = rememberSkipSegmentMarkerColor()
     val description = stringResource(Res.string.player_seek_position)
     var scrubPosition by remember { mutableStateOf<Long?>(null) }
     val interactionSource = remember { MutableInteractionSource() }
@@ -171,6 +174,23 @@ internal fun PlayerTimeline(
                                 size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
                                 cornerRadius = radius,
                             )
+                            if (durationMs > 0L) {
+                                val segmentRadius = CornerRadius(minOf(3.dp.toPx(), trackHeight / 2))
+                                segments.forEach { segment ->
+                                    val startFrac = ((segment.startTime * 1000.0) / durationMs)
+                                        .coerceIn(0.0, 1.0).toFloat()
+                                    val endFrac = ((segment.endTime * 1000.0) / durationMs)
+                                        .coerceIn(0.0, 1.0).toFloat()
+                                    val widthPx = (endFrac - startFrac) * size.width
+                                    if (widthPx <= 0.5f) return@forEach
+                                    drawRoundRect(
+                                        color = segmentMarkerColor,
+                                        topLeft = Offset(startFrac * size.width, trackOrigin.y),
+                                        size = Size(widthPx, trackHeight),
+                                        cornerRadius = segmentRadius,
+                                    )
+                                }
+                            }
                         },
                 )
             },
