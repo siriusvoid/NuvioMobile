@@ -292,6 +292,7 @@ internal fun PlayerControlsShell(
                     PlayerTimeline(
                         snapshot = playbackSnapshot,
                         displayedPositionMs = displayedPositionMs,
+                        segments = skipSegments,
                         onScrubChange = onScrubChange,
                         onScrubFinished = {
                             onInteraction()
@@ -694,6 +695,19 @@ private fun ProgressControls(
     }
 }
 
+/** White stays visible over the accent-colored played fill; light purple only on the White theme (white would vanish on its near-white fill). */
+@Composable
+internal fun rememberSkipSegmentMarkerColor(): Color {
+    val accentColor = MaterialTheme.colorScheme.primary
+    return remember(accentColor) {
+        if (accentColor == ThemeColors.White.secondary) {
+            Color(0xFFCE93D8).copy(alpha = 0.6f)
+        } else {
+            Color.White.copy(alpha = 0.6f)
+        }
+    }
+}
+
 /** The default slider track with intro/recap/outro segments drawn on top as rounded blocks, lined up with the track. */
 @Composable
 private fun SkipSegmentsTrack(
@@ -742,15 +756,7 @@ internal fun PlayerSeekBar(
     // displayedPositionMs recomposes, so the finish seeks to what was last reported.
     val scrubTargetMs = remember { mutableStateOf<Long?>(null) }
 
-    // White stays visible over the accent-colored played fill; light purple only on the White theme (white would vanish on its near-white fill).
-    val accentColor = MaterialTheme.colorScheme.primary
-    val segmentMarkerColor = remember(accentColor) {
-        if (accentColor == ThemeColors.White.secondary) {
-            Color(0xFFCE93D8).copy(alpha = 0.6f)
-        } else {
-            Color.White.copy(alpha = 0.6f)
-        }
-    }
+    val segmentMarkerColor = rememberSkipSegmentMarkerColor()
 
     Column(modifier = modifier) {
         Slider(
