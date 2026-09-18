@@ -6,6 +6,9 @@ import com.nuvio.app.features.addons.AddonCatalog
 import com.nuvio.app.features.addons.AddonExtraProperty
 import com.nuvio.app.features.addons.AddonManifest
 import com.nuvio.app.features.addons.AddonResource
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.add
@@ -210,13 +213,31 @@ internal object WebDavAddonService {
         // it is resolved once per source rather than once per stream.
         val headersBySource = HashMap<String, Map<String, String>>()
 
+        // A folder that covers the season but not this episode may only have a short
+        // saved listing: it is listed again, all such folders at once.
+        val found = coroutineScope {
+            candidates
+                .filter { (_, match) -> match.sourceId in enabledSources }
+                .map { (folder, match) ->
+                    async {
+                        val files = selectFiles(folder, match, parts)
+                        if (files.isNotEmpty() || !coversRequestedSeason(folder, match, parts)) {
+                            return@async Triple(folder, match, files)
+                        }
+                        val relisted = WebDavLibraryRepository.relistFolder(folder)
+                            ?: return@async Triple(folder, match, files)
+                        Triple(relisted, match, selectFiles(relisted, match, parts))
+                    }
+                }
+                .awaitAll()
+        }
+
         val streams = ArrayList<JsonObject>()
-        candidates.forEach { (folder, match) ->
+        found.forEach { (folder, match, files) ->
             val source = enabledSources[match.sourceId] ?: return@forEach
             val headers = headersBySource.getOrPut(match.sourceId) {
                 WebDavLibraryRepository.playbackHeaders(match.sourceId)
             }
-            val files = selectFiles(folder, match, parts)
             files.forEach { file ->
                 streams.add(buildStream(file, folder, match, headers, source.displayName))
             }
@@ -246,6 +267,16 @@ internal object WebDavAddonService {
                 return@filter false
             }
             placement.episode == requestedEpisode
+        }
+    }
+
+    /** Whether a series folder holds any episode of the requested season. */
+    private fun coversRequestedSeason(folder: WebDavFolder, match: WebDavMatch, parts: VideoIdParts): Boolean {
+        if (match.contentType != WebDavMatch.CONTENT_TYPE_SERIES || parts.episode == null) return false
+        val requestedSeason = parts.season ?: match.season
+        return folder.files.any { file ->
+            val season = placeFile(file, match)?.season ?: return@any false
+            requestedSeason == null || season == requestedSeason
         }
     }
 

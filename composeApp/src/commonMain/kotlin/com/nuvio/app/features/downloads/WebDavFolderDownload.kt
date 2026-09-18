@@ -4,7 +4,10 @@ import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.webdav.WebDavAddonService
+import com.nuvio.app.features.webdav.WebDavFolder
 import com.nuvio.app.features.webdav.WebDavIndex
+import com.nuvio.app.features.webdav.WebDavLibraryRepository
+import com.nuvio.app.features.webdav.WebDavMatch
 import com.nuvio.app.features.webdav.parseVideoId
 
 /** One episode of a WebDAV folder, as a stream the normal download path takes. */
@@ -53,7 +56,33 @@ internal object WebDavFolderDownload {
         if (!match.isSeries) return null
 
         val videos = MetaDetailsRepository.peek(parentMetaType, parentMetaId)?.videos.orEmpty()
-        val episodes = folder.files
+        var episodes = folderEpisodes(folder, match, stream, videos)
+        // Fewer episodes than the show has for these seasons: the saved listing may be
+        // short, so the folder is listed again.
+        val seasons = episodes.mapTo(mutableSetOf()) { it.season }
+        if (episodes.size < videos.count { it.season in seasons }) {
+            WebDavLibraryRepository.relistFolder(folder)?.let { relisted ->
+                episodes = folderEpisodes(relisted, match, stream, videos)
+            }
+        }
+        if (episodes.size < 2) return null
+
+        val pending = episodes.filter { episode ->
+            when (DownloadsRepository.episodeDownloadStatus(parentMetaId, episode.season, episode.episode)) {
+                null, DownloadStatus.Failed -> true
+                else -> false
+            }
+        }
+        return FolderDownloadPlan(episodes = episodes, pending = pending)
+    }
+
+    private fun folderEpisodes(
+        folder: WebDavFolder,
+        match: WebDavMatch,
+        stream: StreamItem,
+        videos: List<MetaVideo>,
+    ): List<FolderEpisode> =
+        folder.files
             .mapNotNull { file ->
                 val placement = WebDavAddonService.placeFile(file, match) ?: return@mapNotNull null
                 val season = placement.season ?: 1
@@ -77,16 +106,6 @@ internal object WebDavFolderDownload {
             .groupBy { it.season to it.episode }
             .map { (_, copies) -> copies.maxBy { it.sizeBytes ?: 0L } }
             .sortedWith(compareBy({ it.season }, { it.episode }))
-        if (episodes.size < 2) return null
-
-        val pending = episodes.filter { episode ->
-            when (DownloadsRepository.episodeDownloadStatus(parentMetaId, episode.season, episode.episode)) {
-                null, DownloadStatus.Failed -> true
-                else -> false
-            }
-        }
-        return FolderDownloadPlan(episodes = episodes, pending = pending)
-    }
 
     /** Queues the pending episodes, in order, through the normal download path. */
     fun enqueue(
