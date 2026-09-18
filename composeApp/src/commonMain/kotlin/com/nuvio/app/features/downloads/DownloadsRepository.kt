@@ -1,6 +1,7 @@
 package com.nuvio.app.features.downloads
 
 import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.isIos
 import com.nuvio.app.features.streams.StreamItem
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -146,17 +147,22 @@ object DownloadsRepository {
         }
 
         val downloadId = nextDownloadId(now)
+        val displayTitle = title.ifBlank { stream.streamLabel }
+        val isEpisode = seasonNumber != null && episodeNumber != null
+        val baseName = buildBaseFileName(
+            title = displayTitle,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber,
+            releaseYear = if (isEpisode) null else releaseYear(parentMetaType, parentMetaId),
+        )
         val fileName = uniqueFileName(
-            baseName = buildBaseFileName(
-                title = title.ifBlank { stream.streamLabel },
-                seasonNumber = seasonNumber,
-                episodeNumber = episodeNumber,
-                releaseYear = if (seasonNumber == null || episodeNumber == null) {
-                    releaseYear(parentMetaType, parentMetaId)
-                } else {
-                    null
-                },
-            ),
+            // A show's episodes share a folder named after it; a movie gets its own.
+            folder = if (isIos) {
+                if (isEpisode) displayTitle.toSafeFileName().ifBlank { "Download" }.fitFileNameLimit() else baseName.fitFileNameLimit()
+            } else {
+                null
+            },
+            baseName = baseName,
             extension = sourceUrl.fileExtensionFromUrl(),
             takenNames = currentItems.mapTo(mutableSetOf()) { it.fileName.lowercase() },
         )
@@ -515,16 +521,20 @@ private fun buildBaseFileName(
     }
 }
 
-/** Adds ` (2)`, ` (3)`… when another download already has the name. */
-private fun uniqueFileName(baseName: String, extension: String, takenNames: Set<String>): String {
+/**
+ * Path below the downloads folder: `Show/Show S01E01.mkv` on iOS, the bare file
+ * name elsewhere. Adds ` (2)`, ` (3)`… when another download already has the name.
+ */
+private fun uniqueFileName(folder: String?, baseName: String, extension: String, takenNames: Set<String>): String {
+    val prefix = folder?.let { "$it/" }.orEmpty()
     val base = baseName.fitFileNameLimit()
-    var candidate = "$base.$extension"
+    var candidate = "$prefix$base.$extension"
     var attempt = 2
     while (
         candidate.lowercase() in takenNames ||
         DownloadsPlatformDownloader.resolveLocalFileUri(localFileUri = null, destinationFileName = candidate) != null
     ) {
-        candidate = "$base ($attempt).$extension"
+        candidate = "$prefix$base ($attempt).$extension"
         attempt++
     }
     return candidate

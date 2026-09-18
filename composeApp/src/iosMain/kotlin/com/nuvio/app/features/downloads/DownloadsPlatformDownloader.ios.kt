@@ -80,6 +80,7 @@ internal actual object DownloadsPlatformDownloader {
     ): DownloadsTaskHandle {
         val downloadId = request.item.id
         onMain {
+            createParentDirectory("${DownloadFolder.directoryPath()}/${request.destinationFileName}")
             DownloadSubtitlePreparation.start(downloadId, request)
             BackgroundDownloads.start(
                 downloadId = downloadId,
@@ -98,7 +99,7 @@ internal actual object DownloadsPlatformDownloader {
         if (localFileUri.isNullOrBlank()) return false
         val path = localFileUri.toLocalPath() ?: return false
         if (NSFileManager.defaultManager.fileExistsAtPath(path)) {
-            return removePathIfExists(path)
+            return removePathIfExists(path).also { removeFolderIfEmpty(path) }
         }
 
         val fileName = path.substringAfterLast('/').takeIf { it.isNotBlank() } ?: return false
@@ -111,7 +112,7 @@ internal actual object DownloadsPlatformDownloader {
         onMain { BackgroundDownloads.discard(destinationFileName) }
         removePathIfExists(resumeDataPath(destinationFileName))
         // Left by the data-task downloader this one replaced.
-        return removePathIfExists("$destinationPath.part")
+        return removePathIfExists("$destinationPath.part").also { removeFolderIfEmpty(destinationPath) }
     }
 
     actual fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String? {
@@ -414,6 +415,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
 
         val destinationPath = "${DownloadFolder.directoryPath()}/$fileName"
         removePathIfExists(destinationPath)
+        createParentDirectory(destinationPath)
         val moved = NSFileManager.defaultManager.moveItemAtPath(temporaryPath, destinationPath, null)
         if (!moved) {
             removePathIfExists(temporaryPath)
@@ -564,7 +566,32 @@ private fun resumeDataPath(fileName: String): String {
         attributes = null,
         error = null,
     )
-    return "$directory/$fileName.resumedata"
+    // The file name may carry its show folder; the resume data sits flat.
+    val key = fileName.replace("%", "%25").replace("/", "%2F")
+    return "$directory/$key.resumedata"
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private fun createParentDirectory(path: String) {
+    NSFileManager.defaultManager.createDirectoryAtPath(
+        path = path.substringBeforeLast('/'),
+        withIntermediateDirectories = true,
+        attributes = null,
+        error = null,
+    )
+}
+
+/** Drops a show or movie folder once its last file is gone; never a downloads folder itself. */
+@OptIn(ExperimentalForeignApi::class)
+private fun removeFolderIfEmpty(filePath: String) {
+    val folder = filePath.substringBeforeLast('/')
+    if (folder == DownloadFolder.directoryPath().trimEnd('/') || folder == appStorageDirectoryPath().trimEnd('/')) return
+    val manager = NSFileManager.defaultManager
+    val remaining = manager.contentsOfDirectoryAtPath(folder, null)
+        ?.filterIsInstance<String>()
+        ?.filterNot { it == ".DS_Store" }
+        ?: return
+    if (remaining.isEmpty()) manager.removeItemAtPath(folder, null)
 }
 
 private fun writeResumeData(fileName: String, data: NSData) {
