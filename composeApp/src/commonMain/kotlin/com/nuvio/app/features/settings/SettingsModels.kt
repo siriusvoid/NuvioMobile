@@ -18,6 +18,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_content_discov
 import nuvio.composeapp.generated.resources.compose_settings_page_debrid
 import nuvio.composeapp.generated.resources.compose_settings_page_webdav_library
 import nuvio.composeapp.generated.resources.compose_settings_page_webdav_review
+import nuvio.composeapp.generated.resources.compose_settings_page_webdav_source
 import nuvio.composeapp.generated.resources.compose_settings_page_continue_watching
 import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
 import nuvio.composeapp.generated.resources.compose_settings_page_imported_subtitles
@@ -35,6 +36,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_supporters_con
 import nuvio.composeapp.generated.resources.compose_settings_page_tmdb_enrichment
 import nuvio.composeapp.generated.resources.compose_settings_page_trakt
 import nuvio.composeapp.generated.resources.compose_settings_page_tracking
+import nuvio.composeapp.generated.resources.details_subtitles_import
 import nuvio.composeapp.generated.resources.settings_account
 import org.jetbrains.compose.resources.StringResource
 
@@ -148,15 +150,25 @@ internal enum class SettingsPage(
         category = SettingsCategory.General,
         parentPage = Integrations,
     ),
+    WebDavSource(
+        titleRes = Res.string.compose_settings_page_webdav_source,
+        category = SettingsCategory.General,
+        parentPage = WebDavLibrary,
+    ),
     WebDavReview(
         titleRes = Res.string.compose_settings_page_webdav_review,
         category = SettingsCategory.General,
-        parentPage = WebDavLibrary,
+        parentPage = WebDavSource,
     ),
     ImportedSubtitles(
         titleRes = Res.string.compose_settings_page_imported_subtitles,
         category = SettingsCategory.General,
         parentPage = Playback,
+    ),
+    ImportedSubtitlePack(
+        titleRes = Res.string.details_subtitles_import,
+        category = SettingsCategory.General,
+        parentPage = ImportedSubtitles,
     ),
     MdbListRatings(
         titleRes = Res.string.compose_settings_page_mdblist_ratings,
