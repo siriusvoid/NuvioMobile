@@ -626,6 +626,13 @@
     <string name="downloads_episode_count">%1$d downloaded episode(s)</string>
     <string name="downloads_open_directory">Open downloads folder</string>
     <string name="downloads_open_directory_failed">Couldn&apos;t open downloads folder</string>
+    <string name="downloads_delete_show">Delete all episodes</string>
+    <string name="downloads_delete_season">Delete season</string>
+    <string name="downloads_delete_frees_space">%1$s will be freed</string>
+    <plurals name="downloads_delete_episodes_title">
+        <item quantity="one">Delete %1$d episode?</item>
+        <item quantity="other">Delete %1$d episodes?</item>
+    </plurals>
     <string name="downloads_location_title">Download location</string>
     <string name="downloads_location_app_storage">App storage</string>
     <string name="downloads_location_use_app_storage">Use app storage</string>

@@ -49,6 +49,7 @@ import com.nuvio.app.features.settings.SettingsGroup
 import com.nuvio.app.features.settings.SettingsGroupDivider
 import com.nuvio.app.features.settings.SettingsNavigationRow
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -66,6 +67,7 @@ fun DownloadsScreen(
 
     var selectedShowId by rememberSaveable(initialShowId) { mutableStateOf(initialShowId) }
     var downloadPendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var downloadsPendingBulkDeletion by rememberSaveable { mutableStateOf<List<String>?>(null) }
     val openDownloadsDirectoryFailedText = stringResource(Res.string.downloads_open_directory_failed)
     val folderNotWritableText = stringResource(Res.string.downloads_location_not_writable)
     val downloadFolderName by DownloadFolder.folderName.collectAsStateWithLifecycle()
@@ -130,6 +132,7 @@ fun DownloadsScreen(
                     onNavigateToShow?.invoke(showId, title) ?: run { selectedShowId = showId }
                 },
                 onDeleteDownload = { downloadPendingDeletionId = it },
+                onDeleteDownloads = { downloadsPendingBulkDeletion = it },
             )
         } else {
             downloadsShowContent(
@@ -137,6 +140,7 @@ fun DownloadsScreen(
                 episodes = completedEpisodes,
                 onOpenDownload = onOpenDownload,
                 onDeleteDownload = { downloadPendingDeletionId = it },
+                onDeleteDownloads = { downloadsPendingBulkDeletion = it },
             )
         }
     }
@@ -161,6 +165,25 @@ fun DownloadsScreen(
             onDismiss = { downloadPendingDeletionId = null },
         )
     }
+
+    // A whole show or season goes with one confirmation instead of one per episode.
+    val pendingBulkDeletion = downloadsPendingBulkDeletion
+    if (pendingBulkDeletion != null) {
+        val deleting = uiState.items.filter { it.id in pendingBulkDeletion }
+        val freedBytes = deleting.sumOf { it.totalBytes ?: it.downloadedBytes }
+        NuvioStatusModal(
+            title = pluralStringResource(Res.plurals.downloads_delete_episodes_title, deleting.size, deleting.size),
+            message = stringResource(Res.string.downloads_delete_frees_space, formatBytes(freedBytes)),
+            isVisible = true,
+            confirmText = stringResource(Res.string.action_yes),
+            dismissText = stringResource(Res.string.action_no),
+            onConfirm = {
+                DownloadsRepository.deleteDownloads(pendingBulkDeletion)
+                downloadsPendingBulkDeletion = null
+            },
+            onDismiss = { downloadsPendingBulkDeletion = null },
+        )
+    }
 }
 
 private fun LazyListScope.downloadsRootContent(
@@ -170,6 +193,7 @@ private fun LazyListScope.downloadsRootContent(
     onOpenDownload: (DownloadItem) -> Unit,
     onOpenShow: (showId: String, title: String) -> Unit,
     onDeleteDownload: (String) -> Unit,
+    onDeleteDownloads: (List<String>) -> Unit,
 ) {
     val activeItems = uiState.activeItems
     val completedMovies = uiState.completedItems.filterNot(DownloadItem::isEpisode)
@@ -275,6 +299,13 @@ private fun LazyListScope.downloadsRootContent(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    IconButton(onClick = { onDeleteDownloads(episodes.map { it.id }) }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = stringResource(Res.string.downloads_delete_show),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -303,6 +334,7 @@ private fun LazyListScope.downloadsShowContent(
     episodes: List<DownloadItem>,
     onOpenDownload: (DownloadItem) -> Unit,
     onDeleteDownload: (String) -> Unit,
+    onDeleteDownloads: (List<String>) -> Unit,
 ) {
     val showEpisodes = episodes
         .filter { it.parentMetaId == showId }
@@ -337,13 +369,30 @@ private fun LazyListScope.downloadsShowContent(
 
     seasons.forEach { (seasonNumber, entries) ->
         item {
-            SectionTitle(
-                if (seasonNumber == 0) {
-                    stringResource(Res.string.episodes_specials)
-                } else {
-                    stringResource(Res.string.episodes_season, seasonNumber)
-                },
-            )
+            // The delete button lines up with the episode rows' own delete buttons.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 26.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    SectionTitle(
+                        if (seasonNumber == 0) {
+                            stringResource(Res.string.episodes_specials)
+                        } else {
+                            stringResource(Res.string.episodes_season, seasonNumber)
+                        },
+                    )
+                }
+                IconButton(onClick = { onDeleteDownloads(entries.map { it.id }) }) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = stringResource(Res.string.downloads_delete_season),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
 
         val sortedEpisodes = entries.sortedForSeriesDownloads()

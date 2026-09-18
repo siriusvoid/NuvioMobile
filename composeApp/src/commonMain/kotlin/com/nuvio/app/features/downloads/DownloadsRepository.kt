@@ -277,6 +277,22 @@ object DownloadsRepository {
         persist()
     }
 
+    /** Deletes several downloads, their files and subtitles with them, in one update. */
+    fun deleteDownloads(downloadIds: Collection<String>) {
+        ensureLoaded()
+        val ids = downloadIds.toSet()
+        val deleting = _uiState.value.items.filter { it.id in ids }
+        if (deleting.isEmpty()) return
+
+        deleting.forEach { item ->
+            activeHandles.remove(item.id)?.cancel()
+            DownloadsPlatformDownloader.removeFile(playableLocalFileUri(item) ?: item.localFileUri)
+            DownloadsPlatformDownloader.removePartialFile(item.fileName)
+        }
+        publish(_uiState.value.items.filterNot { it.id in ids })
+        persist()
+    }
+
     private fun loadFromDisk() {
         hasLoaded = true
         val payload = DownloadsStorage.loadPayload().orEmpty().trim()

@@ -619,6 +619,15 @@
     <string name="downloads_episode_count">%1$d скачанные эпизоды</string>
     <string name="downloads_open_directory">Открыть папку загрузок</string>
     <string name="downloads_open_directory_failed">Не удалось открыть папку загрузок</string>
+    <string name="downloads_delete_show">Удалить все серии</string>
+    <string name="downloads_delete_season">Удалить сезон</string>
+    <string name="downloads_delete_frees_space">Освободится %1$s</string>
+    <plurals name="downloads_delete_episodes_title">
+        <item quantity="one">Удалить %1$d серию?</item>
+        <item quantity="few">Удалить %1$d серии?</item>
+        <item quantity="many">Удалить %1$d серий?</item>
+        <item quantity="other">Удалить %1$d серии?</item>
+    </plurals>
     <string name="downloads_location_title">Папка загрузок</string>
     <string name="downloads_location_app_storage">Хранилище приложения</string>
     <string name="downloads_location_use_app_storage">Использовать хранилище приложения</string>
