@@ -101,7 +101,7 @@ object WebDavLibraryRepository {
         val test = WebDavClient(normalizedBase, effectiveUsername, trimmedPassword)
             .testConnection(normalizedRoot)
         if (test is WebDavConnectionResult.Failure) {
-            return Result.failure(IllegalStateException(test.message))
+            return Result.failure(test.cause ?: IllegalStateException(test.message))
         }
 
         val source = WebDavSource(
@@ -602,7 +602,11 @@ object WebDavLibraryRepository {
 
     suspend fun setExcluded(folderKey: String, excluded: Boolean) {
         val current = WebDavIndex.match(folderKey) ?: return
-        WebDavIndex.putMatch(current.copy(excluded = excluded, userSet = true))
+        // Excluding is a decision a rescan must not undo. Including again is "never mind",
+        // so only a title picked by hand stays pinned; a guessed match goes back to being
+        // the scanner's to revisit, and to being worth checking.
+        val userSet = excluded || current.placementStep == PlacementStep.Manual
+        WebDavIndex.putMatch(current.copy(excluded = excluded, userSet = userSet))
         refreshCounts()
         publishCatalogChange()
     }

@@ -75,9 +75,7 @@ internal class WebDavClient(
 
         if (response.status !in 200..299) {
             log.w { "PROPFIND $url failed: ${response.body.take(300)}" }
-            return Result.failure(
-                IllegalStateException(describeStatus(response.status, response.body)),
-            )
+            return Result.failure(httpFailure(response.status, response.body))
         }
 
         val entries = runCatching { WebDavXml.parseMultistatus(response.body) }
@@ -99,7 +97,10 @@ internal class WebDavClient(
         return result.fold(
             onSuccess = { WebDavConnectionResult.Success(it.size) },
             onFailure = { error ->
-                WebDavConnectionResult.Failure(error.message ?: getString(Res.string.settings_webdav_unreachable))
+                WebDavConnectionResult.Failure(
+                    message = error.message ?: getString(Res.string.settings_webdav_unreachable),
+                    cause = error,
+                )
             },
         )
     }
@@ -171,7 +172,7 @@ internal class WebDavClient(
      * Failure text carries the status code and whatever the server said, so a
      * failed connection is diagnosable from the screen instead of by guesswork.
      */
-    private suspend fun describeStatus(status: Int, body: String): String {
+    private suspend fun httpFailure(status: Int, body: String): WebDavHttpException {
         val explanation = getString(
             when (status) {
                 401 -> Res.string.settings_webdav_http_401
@@ -184,11 +185,12 @@ internal class WebDavClient(
             },
         )
         val serverMessage = serverMessageFrom(body)
-        return if (serverMessage != null) {
+        val message = if (serverMessage != null) {
             getString(Res.string.settings_webdav_http_error_with_message, status, explanation, serverMessage)
         } else {
             getString(Res.string.settings_webdav_http_error, status, explanation)
         }
+        return WebDavHttpException(status, explanation, serverMessage, message)
     }
 
     /** Pulls the human-readable part out of a DAV error body, when there is one. */
