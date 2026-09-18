@@ -29,5 +29,17 @@ internal expect object DownloadsPlatformDownloader {
 
     fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String?
 
+    /**
+     * True only when a finished download's file is known to be deleted, as opposed
+     * to out of reach for now (a drive unplugged, a file iCloud has offloaded).
+     */
+    fun isFileGone(localFileUri: String?, destinationFileName: String): Boolean
+
+    /**
+     * True when an unfinished download's show or movie folder was deleted. The folder
+     * is made when the download starts, so it can only be missing if removed.
+     */
+    fun isFolderGone(destinationFileName: String): Boolean
+
     fun openDownloadsDirectory(): Boolean
 }

@@ -1,6 +1,7 @@
 package com.nuvio.app.features.downloads
 
-import com.nuvio.app.features.player.addonSubtitleRequests
+import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.isIos
 import com.nuvio.app.features.streams.StreamItem
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -146,14 +147,24 @@ object DownloadsRepository {
         }
 
         val downloadId = nextDownloadId(now)
-        val fileName = buildFileName(
-            title = title,
+        val displayTitle = title.ifBlank { stream.streamLabel }
+        val isEpisode = seasonNumber != null && episodeNumber != null
+        val baseName = buildBaseFileName(
+            title = displayTitle,
             seasonNumber = seasonNumber,
             episodeNumber = episodeNumber,
-            episodeTitle = episodeTitle,
-            fallbackTitle = stream.streamLabel,
-            sourceUrl = sourceUrl,
-            downloadId = downloadId,
+            releaseYear = if (isEpisode) null else releaseYear(parentMetaType, parentMetaId),
+        )
+        val fileName = uniqueFileName(
+            // A show's episodes share a folder named after it; a movie gets its own.
+            folder = if (isIos) {
+                if (isEpisode) displayTitle.toSafeFileName().ifBlank { "Download" }.fitFileNameLimit() else baseName.fitFileNameLimit()
+            } else {
+                null
+            },
+            baseName = baseName,
+            extension = sourceUrl.fileExtensionFromUrl(),
+            takenNames = currentItems.mapTo(mutableSetOf()) { it.fileName.lowercase() },
         )
 
         val item = DownloadItem(
@@ -177,13 +188,13 @@ object DownloadsRepository {
             sourceUrl = sourceUrl,
             sourceHeaders = sanitizeRequestHeaders(stream.behaviorHints.proxyHeaders?.request),
             sourceResponseHeaders = sanitizeResponseHeaders(stream.behaviorHints.proxyHeaders?.response),
-            subtitleRequests = addonSubtitleRequests(contentType, videoId),
             sourceSubtitles = stream.externalSubtitles,
             localFileUri = null,
             fileName = fileName,
             status = DownloadStatus.Downloading,
             downloadedBytes = 0L,
-            totalBytes = null,
+            // Known up front when the source lists it, so queued downloads count toward the total.
+            totalBytes = stream.behaviorHints.videoSize?.takeIf { it > 0L },
             errorMessage = null,
             createdAtEpochMs = now,
             updatedAtEpochMs = now,
@@ -201,6 +212,13 @@ object DownloadsRepository {
         }
     }
 
+    /** Status of the download already made or running for an episode, if there is one. */
+    fun episodeDownloadStatus(parentMetaId: String, seasonNumber: Int, episodeNumber: Int): DownloadStatus? {
+        ensureLoaded()
+        val key = buildLogicalKey(parentMetaId, seasonNumber, episodeNumber)
+        return _uiState.value.items.firstOrNull { it.logicalContentKey == key }?.status
+    }
+
     fun pauseDownload(downloadId: String) {
         ensureLoaded()
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
@@ -216,12 +234,13 @@ object DownloadsRepository {
         }
     }
 
-    fun pauseActiveDownloads() {
-        ensureLoaded()
-        _uiState.value.items
-            .filter { it.status == DownloadStatus.Downloading }
-            .map { it.id }
-            .forEach(::pauseDownload)
+    fun pauseDownloads(downloadIds: Collection<String>) {
+        downloadIds.forEach(::pauseDownload)
+    }
+
+    /** Resumes paused and failed downloads; the queue then takes them in episode order. */
+    fun resumeDownloads(downloadIds: Collection<String>) {
+        downloadIds.forEach(::resumeDownload)
     }
 
     fun resumeDownload(downloadId: String) {
@@ -267,6 +286,44 @@ object DownloadsRepository {
         persist()
     }
 
+    /**
+     * Drops downloads deleted outside the app, in the Files app for example: finished
+     * ones whose file is gone, and paused or failed ones whose folder is gone, along
+     * with what is left of their subtitles, partial data and folder.
+     */
+    fun pruneMissingFiles() {
+        ensureLoaded()
+        val gone = _uiState.value.items.filter { item ->
+            when (item.status) {
+                DownloadStatus.Completed -> DownloadsPlatformDownloader.isFileGone(item.localFileUri, item.fileName)
+                DownloadStatus.Paused, DownloadStatus.Failed -> DownloadsPlatformDownloader.isFolderGone(item.fileName)
+                DownloadStatus.Downloading -> false
+            }
+        }
+        if (gone.isEmpty()) return
+
+        gone.forEach { DownloadsPlatformDownloader.removePartialFile(it.fileName) }
+        val goneIds = gone.mapTo(mutableSetOf()) { it.id }
+        publish(_uiState.value.items.filterNot { it.id in goneIds })
+        persist()
+    }
+
+    /** Deletes several downloads, their files and subtitles with them, in one update. */
+    fun deleteDownloads(downloadIds: Collection<String>) {
+        ensureLoaded()
+        val ids = downloadIds.toSet()
+        val deleting = _uiState.value.items.filter { it.id in ids }
+        if (deleting.isEmpty()) return
+
+        deleting.forEach { item ->
+            activeHandles.remove(item.id)?.cancel()
+            DownloadsPlatformDownloader.removeFile(playableLocalFileUri(item) ?: item.localFileUri)
+            DownloadsPlatformDownloader.removePartialFile(item.fileName)
+        }
+        publish(_uiState.value.items.filterNot { it.id in ids })
+        persist()
+    }
+
     private fun loadFromDisk() {
         hasLoaded = true
         val payload = DownloadsStorage.loadPayload().orEmpty().trim()
@@ -295,6 +352,7 @@ object DownloadsRepository {
         }
         normalized.filter { it.status == DownloadStatus.Downloading && it.id !in activeHandles }
             .forEach(::startDownload)
+        pruneMissingFiles()
     }
 
     private fun startDownload(item: DownloadItem) {
@@ -309,7 +367,7 @@ object DownloadsRepository {
                     } else {
                         current.copy(
                             downloadedBytes = downloadedBytes.coerceAtLeast(0L),
-                            totalBytes = totalBytes?.takeIf { it > 0L },
+                            totalBytes = totalBytes?.takeIf { it > 0L } ?: current.totalBytes,
                             updatedAtEpochMs = DownloadsClock.nowEpochMs(),
                             errorMessage = null,
                         )
@@ -500,43 +558,73 @@ private fun buildLogicalKey(
     "${parentMetaId.trim()}|movie"
 }
 
-private fun buildFileName(
+/**
+ * The title as the app shows it, the way media apps expect: `Title S01E01` for an
+ * episode, `Title (2023)` for a movie. Its subtitles are named after it.
+ */
+private fun buildBaseFileName(
     title: String,
     seasonNumber: Int?,
     episodeNumber: Int?,
-    episodeTitle: String?,
-    fallbackTitle: String,
-    sourceUrl: String,
-    downloadId: String,
+    releaseYear: Int?,
 ): String {
-    val baseTitle = if (seasonNumber != null && episodeNumber != null) {
-        buildString {
-            append(title)
-            append(" S")
-            append(seasonNumber.toString().padStart(2, '0'))
-            append('E')
-            append(episodeNumber.toString().padStart(2, '0'))
-            if (!episodeTitle.isNullOrBlank()) {
-                append(' ')
-                append(episodeTitle)
-            }
-        }
-    } else {
-        title.ifBlank { fallbackTitle }
-    }
-
-    val extension = sourceUrl.fileExtensionFromUrl()
-    return buildString {
-        append(baseTitle.sanitizeFileName().ifBlank { "download" }.take(92))
-        append('_')
-        append(downloadId)
-        append('.')
-        append(extension)
+    val name = title.toSafeFileName().ifBlank { "Download" }
+    return when {
+        seasonNumber != null && episodeNumber != null ->
+            "$name S${seasonNumber.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')}"
+        releaseYear != null -> "$name ($releaseYear)"
+        else -> name
     }
 }
 
-private fun String.sanitizeFileName(): String =
-    trim().replace(Regex("[^A-Za-z0-9._ -]"), "_")
+/**
+ * Path below the downloads folder: `Show/Show S01E01.mkv` on iOS, the bare file
+ * name elsewhere. Adds ` (2)`, ` (3)`… when another download already has the name.
+ */
+private fun uniqueFileName(folder: String?, baseName: String, extension: String, takenNames: Set<String>): String {
+    val prefix = folder?.let { "$it/" }.orEmpty()
+    val base = baseName.fitFileNameLimit()
+    var candidate = "$prefix$base.$extension"
+    var attempt = 2
+    while (
+        candidate.lowercase() in takenNames ||
+        DownloadsPlatformDownloader.resolveLocalFileUri(localFileUri = null, destinationFileName = candidate) != null
+    ) {
+        candidate = "$prefix$base ($attempt).$extension"
+        attempt++
+    }
+    return candidate
+}
+
+private fun releaseYear(metaType: String, metaId: String): Int? {
+    val meta = MetaDetailsRepository.peek(metaType, metaId) ?: return null
+    return listOfNotNull(meta.releaseInfo)
+        .firstNotNullOfOrNull { Regex("\\b(18|19|20)\\d{2}\\b").find(it)?.value?.toIntOrNull() }
+}
+
+/** `/` and `:` are the only characters iOS won't take in a file name; `: ` reads as ` - `. */
+private fun String.toSafeFileName(): String =
+    replace(Regex("\\s*:\\s*"), " - ")
+        .replace('/', '-')
+        .replace(Regex("[\\u0000-\\u001F\\u007F]"), "")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+        .trimStart('.')
+
+/**
+ * Titles are kept whole. Only one longer than [MAX_BASE_NAME_BYTES] is shortened,
+ * so that with a subtitle's label and extension added it still fits the 255-byte
+ * file name limit and can be saved.
+ */
+private fun String.fitFileNameLimit(): String {
+    var value = this
+    while (value.encodeToByteArray().size > MAX_BASE_NAME_BYTES && value.isNotEmpty()) {
+        value = value.dropLast(1)
+    }
+    return value.trimEnd()
+}
+
+private const val MAX_BASE_NAME_BYTES = 200
 
 private fun String.fileExtensionFromUrl(): String {
     val withoutQuery = substringBefore('?').substringBefore('#')

@@ -626,6 +626,19 @@
     <string name="downloads_episode_count">%1$d downloaded episode(s)</string>
     <string name="downloads_open_directory">Open downloads folder</string>
     <string name="downloads_open_directory_failed">Couldn&apos;t open downloads folder</string>
+    <string name="downloads_delete_show">Delete all episodes</string>
+    <string name="downloads_delete_season">Delete season</string>
+    <string name="downloads_pause_all">Pause all</string>
+    <string name="downloads_resume_all">Resume all</string>
+    <string name="downloads_delete_frees_space">%1$s will be freed</string>
+    <plurals name="downloads_delete_episodes_title">
+        <item quantity="one">Delete %1$d episode?</item>
+        <item quantity="other">Delete %1$d episodes?</item>
+    </plurals>
+    <string name="downloads_location_title">Download location</string>
+    <string name="downloads_location_app_storage">App storage</string>
+    <string name="downloads_location_use_app_storage">Use app storage</string>
+    <string name="downloads_location_not_writable">Can't save downloads to that folder</string>
     <string name="downloads_section_active">Active</string>
     <string name="downloads_section_movies">Movies</string>
     <string name="downloads_section_shows">Shows</string>
@@ -1610,6 +1623,19 @@
     <string name="streams_checking_more_addons">Checking more addons…</string>
     <string name="streams_copy_link">Copy stream link</string>
     <string name="streams_download_file">Download file</string>
+    <string name="streams_download_folder">Download folder</string>
+    <string name="downloads_folder_all_downloaded">All downloaded</string>
+    <string name="downloads_folder_nothing_new">Every episode in this folder is already downloaded</string>
+    <string name="downloads_live_progress_count">%1$d of %2$d</string>
+    <string name="downloads_folder_not_enough_space">Not enough space: needs %1$s, %2$s free</string>
+    <plurals name="downloads_folder_episode_count">
+        <item quantity="one">%1$d episode</item>
+        <item quantity="other">%1$d episodes</item>
+    </plurals>
+    <plurals name="downloads_folder_started">
+        <item quantity="one">%1$d episode added to downloads</item>
+        <item quantity="other">%1$d episodes added to downloads</item>
+    </plurals>
     <string name="streams_open_external_player">Open in external player</string>
     <string name="streams_open_internal_player">Open in internal player</string>
     <string name="streams_empty_load_failed_message">The installed stream addons failed to return a valid stream response.</string>

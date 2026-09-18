@@ -619,6 +619,21 @@
     <string name="downloads_episode_count">%1$d скачанные эпизоды</string>
     <string name="downloads_open_directory">Открыть папку загрузок</string>
     <string name="downloads_open_directory_failed">Не удалось открыть папку загрузок</string>
+    <string name="downloads_delete_show">Удалить все серии</string>
+    <string name="downloads_delete_season">Удалить сезон</string>
+    <string name="downloads_pause_all">Приостановить все</string>
+    <string name="downloads_resume_all">Продолжить все</string>
+    <string name="downloads_delete_frees_space">Освободится %1$s</string>
+    <plurals name="downloads_delete_episodes_title">
+        <item quantity="one">Удалить %1$d серию?</item>
+        <item quantity="few">Удалить %1$d серии?</item>
+        <item quantity="many">Удалить %1$d серий?</item>
+        <item quantity="other">Удалить %1$d серии?</item>
+    </plurals>
+    <string name="downloads_location_title">Папка загрузок</string>
+    <string name="downloads_location_app_storage">Хранилище приложения</string>
+    <string name="downloads_location_use_app_storage">Использовать хранилище приложения</string>
+    <string name="downloads_location_not_writable">Не удаётся сохранять загрузки в эту папку</string>
     <string name="downloads_section_active">Активный</string>
     <string name="downloads_section_movies">Фильмы</string>
     <string name="downloads_section_shows">Шоу</string>
@@ -1550,6 +1565,23 @@
     <string name="streams_checking_more_addons">Проверяем другие дополнения…</string>
     <string name="streams_copy_link">Скопировать ссылку на поток</string>
     <string name="streams_download_file">Скачать файл</string>
+    <string name="streams_download_folder">Скачать папку</string>
+    <string name="downloads_folder_all_downloaded">Всё скачано</string>
+    <string name="downloads_folder_nothing_new">Все серии из этой папки уже скачаны</string>
+    <string name="downloads_live_progress_count">%1$d из %2$d</string>
+    <string name="downloads_folder_not_enough_space">Недостаточно места: нужно %1$s, свободно %2$s</string>
+    <plurals name="downloads_folder_episode_count">
+        <item quantity="one">%1$d серия</item>
+        <item quantity="few">%1$d серии</item>
+        <item quantity="many">%1$d серий</item>
+        <item quantity="other">%1$d серии</item>
+    </plurals>
+    <plurals name="downloads_folder_started">
+        <item quantity="one">%1$d серия добавлена в загрузки</item>
+        <item quantity="few">%1$d серии добавлены в загрузки</item>
+        <item quantity="many">%1$d серий добавлено в загрузки</item>
+        <item quantity="other">%1$d серии добавлено в загрузки</item>
+    </plurals>
     <string name="streams_open_external_player">Открыть во внешнем проигрывателе</string>
     <string name="streams_open_internal_player">Открыть во встроенном проигрывателе</string>
     <string name="streams_empty_load_failed_message">Установленные дополнения потока не смогли вернуть действительный ответ потока.</string>

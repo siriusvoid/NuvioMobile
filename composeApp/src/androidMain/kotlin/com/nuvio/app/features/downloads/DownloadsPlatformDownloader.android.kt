@@ -81,6 +81,11 @@ internal actual object DownloadsPlatformDownloader {
         return true
     }
 
+    // Not checked on Android yet: an entry stays until it is deleted in the app.
+    actual fun isFileGone(localFileUri: String?, destinationFileName: String): Boolean = false
+
+    actual fun isFolderGone(destinationFileName: String): Boolean = false
+
     actual fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String? {
         localFileUri
             ?.toLocalFileOrNull()

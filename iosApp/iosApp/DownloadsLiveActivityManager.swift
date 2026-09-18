@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 #if canImport(ActivityKit) && os(iOS) && !targetEnvironment(macCatalyst)
 import ActivityKit
 #endif
@@ -32,8 +33,21 @@ final class DownloadsLiveActivityManager {
         guard #available(iOS 16.1, *) else { return }
 
         let payload = loadPayload()
-        Task {
+
+        // A finished background download wakes the app only briefly; keep it
+        // awake until the Live Activity has taken the new state.
+        var backgroundTaskId: UIBackgroundTaskIdentifier = .invalid
+        backgroundTaskId = UIApplication.shared.beginBackgroundTask(withName: "DownloadsLiveActivitySync") {
+            UIApplication.shared.endBackgroundTask(backgroundTaskId)
+            backgroundTaskId = .invalid
+        }
+
+        Task { @MainActor in
             await apply(payload)
+            if backgroundTaskId != .invalid {
+                UIApplication.shared.endBackgroundTask(backgroundTaskId)
+                backgroundTaskId = .invalid
+            }
         }
 #endif
     }
@@ -61,7 +75,8 @@ final class DownloadsLiveActivityManager {
         let state = DownloadsLiveActivityAttributes.ContentState(
             status: payload.status,
             progressPercent: payload.progressPercent,
-            transferredText: transferredText(payload)
+            transferredText: transferredText(payload),
+            detailText: payload.detail
         )
 
         if let existing, existing.attributes.downloadId == payload.id {
@@ -106,10 +121,13 @@ final class DownloadsLiveActivityManager {
 #if canImport(ActivityKit) && os(iOS) && !targetEnvironment(macCatalyst)
 @available(iOS 16.1, *)
 struct DownloadsLiveActivityAttributes: ActivityAttributes {
+    // Must match the widget extension's copy field for field: ActivityKit
+    // passes this between the two processes as encoded data.
     public struct ContentState: Codable, Hashable {
         let status: String
         let progressPercent: Int
         let transferredText: String
+        let detailText: String?
     }
 
     let downloadId: String
@@ -126,4 +144,5 @@ private struct DownloadsLiveStatusPayload: Decodable {
     let downloadedBytes: Int64
     let totalBytes: Int64?
     let progressPercent: Int
+    let detail: String?
 }

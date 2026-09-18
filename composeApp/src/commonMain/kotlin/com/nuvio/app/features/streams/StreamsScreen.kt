@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SearchOff
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
@@ -76,7 +77,11 @@ import com.nuvio.app.core.ui.NuvioBottomSheetDivider
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
+import com.nuvio.app.features.downloads.DownloadFolder
 import com.nuvio.app.features.downloads.DownloadsRepository
+import com.nuvio.app.features.downloads.FolderDownloadPlan
+import com.nuvio.app.features.downloads.WebDavFolderDownload
+import com.nuvio.app.features.downloads.formatBytes
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -97,6 +102,10 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.getPluralString
+import org.jetbrains.compose.resources.getString
+import androidx.compose.runtime.produceState
 
 // ---------------------------------------------------------------------------
 // Streams Screen
@@ -305,9 +314,41 @@ fun StreamsScreen(
         }
 
 
+        val folderDownloadPlan by produceState<FolderDownloadPlan?>(null, streamActionsTarget) {
+            value = streamActionsTarget?.let { stream ->
+                WebDavFolderDownload.plan(stream, videoId, parentMetaId, parentMetaType)
+            }
+        }
+
         StreamActionsSheet(
             stream = streamActionsTarget,
             externalPlayerEnabled = playerSettings.externalPlayerEnabled,
+            folderDownloadPlan = folderDownloadPlan,
+            onDownloadFolder = { plan ->
+                downloadScope.launch {
+                    val neededBytes = plan.pendingBytes
+                    val freeBytes = DownloadFolder.freeSpaceBytes()
+                    val message = when {
+                        plan.pending.isEmpty() -> getString(Res.string.downloads_folder_nothing_new)
+                        neededBytes != null && freeBytes != null && neededBytes > freeBytes ->
+                            getString(Res.string.downloads_folder_not_enough_space, formatBytes(neededBytes), formatBytes(freeBytes))
+                        else -> {
+                            val queued = WebDavFolderDownload.enqueue(
+                                plan = plan,
+                                contentType = type,
+                                parentMetaId = parentMetaId,
+                                parentMetaType = parentMetaType,
+                                title = title,
+                                logo = logo,
+                                poster = poster,
+                                background = background,
+                            )
+                            getPluralString(Res.plurals.downloads_folder_started, queued, queued)
+                        }
+                    }
+                    NuvioToastController.show(message)
+                }
+            },
             onDismiss = { streamActionsTarget = null },
             onCopyLink = { stream ->
                 val directUrl = stream.playableDirectUrl ?: stream.externalOpenUrl
@@ -1101,6 +1142,8 @@ private fun StreamSourceHeader(
 private fun StreamActionsSheet(
     stream: StreamItem?,
     externalPlayerEnabled: Boolean,
+    folderDownloadPlan: FolderDownloadPlan?,
+    onDownloadFolder: (FolderDownloadPlan) -> Unit,
     onDismiss: () -> Unit,
     onCopyLink: (StreamItem) -> Unit,
     onDownload: (StreamItem) -> Unit,
@@ -1190,8 +1233,30 @@ private fun StreamActionsSheet(
                     }
                 },
             )
+            if (folderDownloadPlan != null) {
+                NuvioBottomSheetDivider()
+                NuvioBottomSheetActionRow(
+                    icon = Icons.Rounded.FolderOpen,
+                    title = stringResource(Res.string.streams_download_folder),
+                    detail = folderDownloadSummary(folderDownloadPlan),
+                    onClick = {
+                        onDownloadFolder(folderDownloadPlan)
+                        coroutineScope.launch {
+                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                        }
+                    },
+                )
+            }
         }
     }
+}
+
+/** What a folder download would add: `12 episodes · 14.2 GB`, without episodes already downloaded. */
+@Composable
+private fun folderDownloadSummary(plan: FolderDownloadPlan): String {
+    if (plan.pending.isEmpty()) return stringResource(Res.string.downloads_folder_all_downloaded)
+    val count = pluralStringResource(Res.plurals.downloads_folder_episode_count, plan.pending.size, plan.pending.size)
+    return plan.pendingBytes?.let { "$count · ${formatBytes(it)}" } ?: count
 }
 
 private fun Long.toPlaybackClock(): String {

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PhoneIphone
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
@@ -25,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,7 +46,11 @@ import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.settings.SettingsGroup
+import com.nuvio.app.features.settings.SettingsGroupDivider
+import com.nuvio.app.features.settings.SettingsNavigationRow
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -60,9 +66,18 @@ fun DownloadsScreen(
         DownloadsRepository.uiState
     }.collectAsStateWithLifecycle()
 
+    // Downloads deleted in the Files app meanwhile drop out of the list.
+    LaunchedEffect(Unit) { DownloadsRepository.pruneMissingFiles() }
+
     var selectedShowId by rememberSaveable(initialShowId) { mutableStateOf(initialShowId) }
     var downloadPendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
+    var downloadsPendingBulkDeletion by rememberSaveable { mutableStateOf<List<String>?>(null) }
     val openDownloadsDirectoryFailedText = stringResource(Res.string.downloads_open_directory_failed)
+    val folderNotWritableText = stringResource(Res.string.downloads_location_not_writable)
+    val downloadFolderName by DownloadFolder.folderName.collectAsStateWithLifecycle()
+    val downloadFolderPicker = rememberDownloadFolderPicker(
+        onRejected = { NuvioToastController.show(folderNotWritableText) },
+    )
 
     val completedEpisodes = remember(uiState.items) {
         uiState.completedItems
@@ -114,11 +129,14 @@ fun DownloadsScreen(
         if (selectedShowId == null) {
             downloadsRootContent(
                 uiState = uiState,
+                downloadFolderName = downloadFolderName,
+                downloadFolderPicker = downloadFolderPicker,
                 onOpenDownload = onOpenDownload,
                 onOpenShow = { showId, title ->
                     onNavigateToShow?.invoke(showId, title) ?: run { selectedShowId = showId }
                 },
                 onDeleteDownload = { downloadPendingDeletionId = it },
+                onDeleteDownloads = { downloadsPendingBulkDeletion = it },
             )
         } else {
             downloadsShowContent(
@@ -126,6 +144,7 @@ fun DownloadsScreen(
                 episodes = completedEpisodes,
                 onOpenDownload = onOpenDownload,
                 onDeleteDownload = { downloadPendingDeletionId = it },
+                onDeleteDownloads = { downloadsPendingBulkDeletion = it },
             )
         }
     }
@@ -150,13 +169,37 @@ fun DownloadsScreen(
             onDismiss = { downloadPendingDeletionId = null },
         )
     }
+
+    // A whole show or season goes with one confirmation instead of one per episode.
+    val pendingBulkDeletion = downloadsPendingBulkDeletion
+    if (pendingBulkDeletion != null) {
+        val deleting = uiState.items.filter { it.id in pendingBulkDeletion }
+        val freedBytes = deleting.sumOf { item ->
+            if (item.status == DownloadStatus.Completed) item.totalBytes ?: item.downloadedBytes else item.downloadedBytes
+        }
+        NuvioStatusModal(
+            title = pluralStringResource(Res.plurals.downloads_delete_episodes_title, deleting.size, deleting.size),
+            message = stringResource(Res.string.downloads_delete_frees_space, formatBytes(freedBytes)),
+            isVisible = true,
+            confirmText = stringResource(Res.string.action_yes),
+            dismissText = stringResource(Res.string.action_no),
+            onConfirm = {
+                DownloadsRepository.deleteDownloads(pendingBulkDeletion)
+                downloadsPendingBulkDeletion = null
+            },
+            onDismiss = { downloadsPendingBulkDeletion = null },
+        )
+    }
 }
 
 private fun LazyListScope.downloadsRootContent(
     uiState: DownloadsUiState,
+    downloadFolderName: String?,
+    downloadFolderPicker: DownloadFolderPickerHandle,
     onOpenDownload: (DownloadItem) -> Unit,
     onOpenShow: (showId: String, title: String) -> Unit,
     onDeleteDownload: (String) -> Unit,
+    onDeleteDownloads: (List<String>) -> Unit,
 ) {
     val activeItems = uiState.activeItems
     val completedMovies = uiState.completedItems.filterNot(DownloadItem::isEpisode)
@@ -170,23 +213,58 @@ private fun LazyListScope.downloadsRootContent(
         }
         .sortedBy { (item, _) -> item.title.lowercase() }
 
+    if (downloadFolderPicker.isSupported) {
+        item(key = "download-location") {
+            DownloadLocationGroup(
+                folderName = downloadFolderName,
+                onChooseFolder = downloadFolderPicker::launch,
+            )
+        }
+    }
+
     if (activeItems.isNotEmpty()) {
         item {
             SectionTitle(stringResource(Res.string.downloads_section_active))
         }
-        items(
-            items = activeItems,
-            key = { it.id },
-        ) { item ->
-            DownloadRow(
-                item = item,
-                onOpen = { onOpenDownload(item) },
-                onPause = { DownloadsRepository.pauseDownload(item.id) },
-                onResume = { DownloadsRepository.resumeDownload(item.id) },
-                onRetry = { DownloadsRepository.retryDownload(item.id) },
-                onDelete = { onDeleteDownload(item.id) },
-            )
-        }
+        // A show's unfinished episodes sit under one heading, in episode order; the
+        // show added last comes first. A movie stays a single row.
+        activeItems
+            .groupBy { if (it.isEpisode) "show:${it.parentMetaId}" else "movie:${it.id}" }
+            .values
+            .forEach { group ->
+                val first = group.first()
+                val rows = if (first.isEpisode) {
+                    val episodes = group.sortedForSeriesDownloads()
+                    val showDownloads = uiState.items.filter { it.isEpisode && it.parentMetaId == first.parentMetaId }
+                    item(key = "active-show-${first.parentMetaId}") {
+                        ActiveShowHeading(
+                            title = first.title,
+                            finished = showDownloads.count { it.status == DownloadStatus.Completed },
+                            total = showDownloads.size,
+                            anyDownloading = episodes.any { it.status == DownloadStatus.Downloading },
+                            onPauseAll = { DownloadsRepository.pauseDownloads(episodes.map { it.id }) },
+                            onResumeAll = { DownloadsRepository.resumeDownloads(episodes.map { it.id }) },
+                            onDeleteAll = { onDeleteDownloads(episodes.map { it.id }) },
+                        )
+                    }
+                    episodes
+                } else {
+                    group
+                }
+                items(
+                    items = rows,
+                    key = { it.id },
+                ) { item ->
+                    DownloadRow(
+                        item = item,
+                        onOpen = { onOpenDownload(item) },
+                        onPause = { DownloadsRepository.pauseDownload(item.id) },
+                        onResume = { DownloadsRepository.resumeDownload(item.id) },
+                        onRetry = { DownloadsRepository.retryDownload(item.id) },
+                        onDelete = { onDeleteDownload(item.id) },
+                    )
+                }
+            }
     }
 
     if (completedMovies.isNotEmpty()) {
@@ -253,6 +331,13 @@ private fun LazyListScope.downloadsRootContent(
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    IconButton(onClick = { onDeleteDownloads(episodes.map { it.id }) }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Delete,
+                            contentDescription = stringResource(Res.string.downloads_delete_show),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -281,6 +366,7 @@ private fun LazyListScope.downloadsShowContent(
     episodes: List<DownloadItem>,
     onOpenDownload: (DownloadItem) -> Unit,
     onDeleteDownload: (String) -> Unit,
+    onDeleteDownloads: (List<String>) -> Unit,
 ) {
     val showEpisodes = episodes
         .filter { it.parentMetaId == showId }
@@ -315,13 +401,30 @@ private fun LazyListScope.downloadsShowContent(
 
     seasons.forEach { (seasonNumber, entries) ->
         item {
-            SectionTitle(
-                if (seasonNumber == 0) {
-                    stringResource(Res.string.episodes_specials)
-                } else {
-                    stringResource(Res.string.episodes_season, seasonNumber)
-                },
-            )
+            // The delete button lines up with the episode rows' own delete buttons.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 26.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    SectionTitle(
+                        if (seasonNumber == 0) {
+                            stringResource(Res.string.episodes_specials)
+                        } else {
+                            stringResource(Res.string.episodes_season, seasonNumber)
+                        },
+                    )
+                }
+                IconButton(onClick = { onDeleteDownloads(entries.map { it.id }) }) {
+                    Icon(
+                        imageVector = Icons.Rounded.Delete,
+                        contentDescription = stringResource(Res.string.downloads_delete_season),
+                        tint = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
         }
 
         val sortedEpisodes = entries.sortedForSeriesDownloads()
@@ -492,6 +595,105 @@ private fun downloadDisplaySubtitle(
     ).filterNotNull().joinToString(" • ")
 }
 
+/** Where new downloads are saved; existing ones stay where they were downloaded. */
+@Composable
+private fun DownloadLocationGroup(
+    folderName: String?,
+    onChooseFolder: () -> Unit,
+) {
+    SettingsGroup(
+        isTablet = false,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        SettingsNavigationRow(
+            title = stringResource(Res.string.downloads_location_title),
+            description = folderName ?: stringResource(Res.string.downloads_location_app_storage),
+            icon = Icons.Rounded.Folder,
+            isTablet = false,
+            onClick = onChooseFolder,
+        )
+        if (folderName != null) {
+            SettingsGroupDivider(isTablet = false)
+            SettingsNavigationRow(
+                title = stringResource(Res.string.downloads_location_use_app_storage),
+                description = null,
+                icon = Icons.Rounded.PhoneIphone,
+                isTablet = false,
+                onClick = DownloadFolder::useAppStorage,
+            )
+        }
+    }
+}
+
+/**
+ * One show in the active list. Its buttons act on all of the show's unfinished
+ * episodes and line up with the episode rows' own buttons below.
+ */
+@Composable
+private fun ActiveShowHeading(
+    title: String,
+    finished: Int,
+    total: Int,
+    anyDownloading: Boolean,
+    onPauseAll: () -> Unit,
+    onResumeAll: () -> Unit,
+    onDeleteAll: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 14.dp, end = 26.dp, top = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(
+                text = title,
+                modifier = Modifier.alignByBaseline().weight(1f, fill = false),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "· " + stringResource(Res.string.downloads_live_progress_count, finished, total),
+                modifier = Modifier.alignByBaseline(),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+            )
+        }
+        if (anyDownloading) {
+            IconButton(onClick = onPauseAll) {
+                Icon(
+                    imageVector = Icons.Rounded.Pause,
+                    contentDescription = stringResource(Res.string.downloads_pause_all),
+                    // Off a card, so the rows' white has to be asked for.
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        } else {
+            IconButton(onClick = onResumeAll) {
+                Icon(
+                    imageVector = Icons.Rounded.PlayArrow,
+                    contentDescription = stringResource(Res.string.downloads_resume_all),
+                    // Off a card, so the rows' white has to be asked for.
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+        IconButton(onClick = onDeleteAll) {
+            Icon(
+                imageVector = Icons.Rounded.Delete,
+                contentDescription = stringResource(Res.string.downloads_delete_show),
+                tint = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
 @Composable
 private fun SectionTitle(title: String) {
     Text(
@@ -522,7 +724,7 @@ private fun statusText(item: DownloadItem): String {
     }
 }
 
-private fun formatBytes(bytes: Long): String {
+internal fun formatBytes(bytes: Long): String {
     if (bytes <= 0L) return "0 ${localizedByteUnit("B")}"
     val kib = 1024.0
     val mib = kib * 1024.0

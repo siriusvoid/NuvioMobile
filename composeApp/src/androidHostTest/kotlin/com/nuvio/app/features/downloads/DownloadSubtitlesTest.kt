@@ -42,7 +42,7 @@ class DownloadSubtitlesTest {
     @get:Rule val temporary = TemporaryFolder()
 
     @Test
-    fun backgroundDownloadSavesAddonAndStreamSubtitlesBeforeVideo(): Unit = runBlocking {
+    fun backgroundDownloadSavesStreamSubtitlesButNotAddonOnesBeforeVideo(): Unit = runBlocking {
         val context = RuntimeEnvironment.getApplication()
         val paths = Collections.synchronizedList(mutableListOf<String>())
         val playerSubtitles = SubtitleRepository.addonSubtitles.value
@@ -89,11 +89,12 @@ class DownloadSubtitlesTest {
         val uri = assertNotNull(restored.localFileUri)
         val tracks = DownloadSubtitles.localSubtitles(uri)
         assertEquals(DownloadStatus.Completed, restored.status)
-        assertEquals(setOf("en", "fr"), tracks.map { it.language }.toSet())
+        assertEquals(listOf("fr"), tracks.map { it.language })
         assertEquals("/video", paths.last())
-        assertEquals(1, paths.count { it == "/english" })
+        assertEquals(0, paths.count { it.startsWith("/subtitles/") || it == "/english" })
         assertEquals(1, paths.count { it == "/french" })
-        assertTrue(tracks.single { it.language == "en" }.name.orEmpty().contains("OpenSubtitles"))
+        // A single subtitle is named after the video, next to it.
+        assertTrue(tracks.single().url.endsWith("/offline-episode.vtt"))
         assertEquals(playerSubtitles, SubtitleRepository.addonSubtitles.value)
         tracks.forEach {
             assertTrue(it.url.startsWith("file:"))
