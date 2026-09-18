@@ -107,7 +107,7 @@ internal actual object DownloadsPlatformDownloader {
 
     actual fun removePartialFile(destinationFileName: String): Boolean {
         val destinationPath = "${DownloadFolder.directoryPath()}/$destinationFileName"
-        DownloadSubtitleStorage(NSURL.fileURLWithPath(destinationPath).absoluteString!!).remove()
+        DownloadSubtitles.remove(NSURL.fileURLWithPath(destinationPath).absoluteString!!)
         onMain { BackgroundDownloads.discard(destinationFileName) }
         removePathIfExists(resumeDataPath(destinationFileName))
         // Left by the data-task downloader this one replaced.
@@ -161,8 +161,9 @@ private class DownloadCallbacks(
 )
 
 /**
- * Addon subtitles are fetched next to the video. The transfer itself has no
- * coroutine to hang them on, so each fetch is tracked per download and
+ * Subtitles saved with a download — the stream's own and the user's imported
+ * ones — are prepared while the video transfers. The transfer itself has no
+ * coroutine to hang that on, so each preparation is tracked per download and
  * cancelled with it. Main thread only.
  */
 private object DownloadSubtitlePreparation {

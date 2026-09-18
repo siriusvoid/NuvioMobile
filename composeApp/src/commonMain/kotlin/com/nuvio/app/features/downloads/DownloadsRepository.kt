@@ -1,6 +1,6 @@
 package com.nuvio.app.features.downloads
 
-import com.nuvio.app.features.player.addonSubtitleRequests
+import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.streams.StreamItem
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -146,14 +146,19 @@ object DownloadsRepository {
         }
 
         val downloadId = nextDownloadId(now)
-        val fileName = buildFileName(
-            title = title,
-            seasonNumber = seasonNumber,
-            episodeNumber = episodeNumber,
-            episodeTitle = episodeTitle,
-            fallbackTitle = stream.streamLabel,
-            sourceUrl = sourceUrl,
-            downloadId = downloadId,
+        val fileName = uniqueFileName(
+            baseName = buildBaseFileName(
+                title = title.ifBlank { stream.streamLabel },
+                seasonNumber = seasonNumber,
+                episodeNumber = episodeNumber,
+                releaseYear = if (seasonNumber == null || episodeNumber == null) {
+                    releaseYear(parentMetaType, parentMetaId)
+                } else {
+                    null
+                },
+            ),
+            extension = sourceUrl.fileExtensionFromUrl(),
+            takenNames = currentItems.mapTo(mutableSetOf()) { it.fileName.lowercase() },
         )
 
         val item = DownloadItem(
@@ -177,7 +182,6 @@ object DownloadsRepository {
             sourceUrl = sourceUrl,
             sourceHeaders = sanitizeRequestHeaders(stream.behaviorHints.proxyHeaders?.request),
             sourceResponseHeaders = sanitizeResponseHeaders(stream.behaviorHints.proxyHeaders?.response),
-            subtitleRequests = addonSubtitleRequests(contentType, videoId),
             sourceSubtitles = stream.externalSubtitles,
             localFileUri = null,
             fileName = fileName,
@@ -492,43 +496,69 @@ private fun buildLogicalKey(
     "${parentMetaId.trim()}|movie"
 }
 
-private fun buildFileName(
+/**
+ * The title as the app shows it, the way media apps expect: `Title S01E01` for an
+ * episode, `Title (2023)` for a movie. Its subtitles are named after it.
+ */
+private fun buildBaseFileName(
     title: String,
     seasonNumber: Int?,
     episodeNumber: Int?,
-    episodeTitle: String?,
-    fallbackTitle: String,
-    sourceUrl: String,
-    downloadId: String,
+    releaseYear: Int?,
 ): String {
-    val baseTitle = if (seasonNumber != null && episodeNumber != null) {
-        buildString {
-            append(title)
-            append(" S")
-            append(seasonNumber.toString().padStart(2, '0'))
-            append('E')
-            append(episodeNumber.toString().padStart(2, '0'))
-            if (!episodeTitle.isNullOrBlank()) {
-                append(' ')
-                append(episodeTitle)
-            }
-        }
-    } else {
-        title.ifBlank { fallbackTitle }
-    }
-
-    val extension = sourceUrl.fileExtensionFromUrl()
-    return buildString {
-        append(baseTitle.sanitizeFileName().ifBlank { "download" }.take(92))
-        append('_')
-        append(downloadId)
-        append('.')
-        append(extension)
+    val name = title.toSafeFileName().ifBlank { "Download" }
+    return when {
+        seasonNumber != null && episodeNumber != null ->
+            "$name S${seasonNumber.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')}"
+        releaseYear != null -> "$name ($releaseYear)"
+        else -> name
     }
 }
 
-private fun String.sanitizeFileName(): String =
-    trim().replace(Regex("[^A-Za-z0-9._ -]"), "_")
+/** Adds ` (2)`, ` (3)`… when another download already has the name. */
+private fun uniqueFileName(baseName: String, extension: String, takenNames: Set<String>): String {
+    val base = baseName.fitFileNameLimit()
+    var candidate = "$base.$extension"
+    var attempt = 2
+    while (
+        candidate.lowercase() in takenNames ||
+        DownloadsPlatformDownloader.resolveLocalFileUri(localFileUri = null, destinationFileName = candidate) != null
+    ) {
+        candidate = "$base ($attempt).$extension"
+        attempt++
+    }
+    return candidate
+}
+
+private fun releaseYear(metaType: String, metaId: String): Int? {
+    val meta = MetaDetailsRepository.peek(metaType, metaId) ?: return null
+    return listOfNotNull(meta.releaseInfo)
+        .firstNotNullOfOrNull { Regex("\\b(18|19|20)\\d{2}\\b").find(it)?.value?.toIntOrNull() }
+}
+
+/** `/` and `:` are the only characters iOS won't take in a file name; `: ` reads as ` - `. */
+private fun String.toSafeFileName(): String =
+    replace(Regex("\\s*:\\s*"), " - ")
+        .replace('/', '-')
+        .replace(Regex("[\\u0000-\\u001F\\u007F]"), "")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+        .trimStart('.')
+
+/**
+ * Titles are kept whole. Only one longer than [MAX_BASE_NAME_BYTES] is shortened,
+ * so that with a subtitle's label and extension added it still fits the 255-byte
+ * file name limit and can be saved.
+ */
+private fun String.fitFileNameLimit(): String {
+    var value = this
+    while (value.encodeToByteArray().size > MAX_BASE_NAME_BYTES && value.isNotEmpty()) {
+        value = value.dropLast(1)
+    }
+    return value.trimEnd()
+}
+
+private const val MAX_BASE_NAME_BYTES = 200
 
 private fun String.fileExtensionFromUrl(): String {
     val withoutQuery = substringBefore('?').substringBefore('#')
