@@ -216,14 +216,6 @@ object DownloadsRepository {
         }
     }
 
-    fun pauseActiveDownloads() {
-        ensureLoaded()
-        _uiState.value.items
-            .filter { it.status == DownloadStatus.Downloading }
-            .map { it.id }
-            .forEach(::pauseDownload)
-    }
-
     fun resumeDownload(downloadId: String) {
         ensureLoaded()
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
