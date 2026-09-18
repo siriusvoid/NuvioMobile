@@ -619,6 +619,10 @@
     <string name="downloads_episode_count">%1$d скачанные эпизоды</string>
     <string name="downloads_open_directory">Открыть папку загрузок</string>
     <string name="downloads_open_directory_failed">Не удалось открыть папку загрузок</string>
+    <string name="downloads_location_title">Папка загрузок</string>
+    <string name="downloads_location_app_storage">Хранилище приложения</string>
+    <string name="downloads_location_use_app_storage">Использовать хранилище приложения</string>
+    <string name="downloads_location_not_writable">Не удаётся сохранять загрузки в эту папку</string>
     <string name="downloads_section_active">Активный</string>
     <string name="downloads_section_movies">Фильмы</string>
     <string name="downloads_section_shows">Шоу</string>

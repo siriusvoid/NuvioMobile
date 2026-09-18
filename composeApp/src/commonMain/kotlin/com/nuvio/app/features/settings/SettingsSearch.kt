@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Home
@@ -248,6 +249,16 @@ internal fun settingsSearchEntries(
         icon = Icons.Rounded.CloudDownload,
         target = SettingsSearchTarget.Downloads,
     )
+    if (isIos) {
+        add(
+            key = "download-location",
+            title = stringResource(Res.string.downloads_location_title),
+            page = downloadsPage,
+            category = generalCategory,
+            icon = Icons.Rounded.Folder,
+            target = SettingsSearchTarget.Downloads,
+        )
+    }
     addPage(
         page = SettingsPage.Playback,
         key = "playback",

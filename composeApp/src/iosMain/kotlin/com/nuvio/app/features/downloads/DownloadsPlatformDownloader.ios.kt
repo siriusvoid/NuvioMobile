@@ -102,11 +102,11 @@ internal actual object DownloadsPlatformDownloader {
         }
 
         val fileName = path.substringAfterLast('/').takeIf { it.isNotBlank() } ?: return false
-        return removePathIfExists("${downloadsDirectoryPath()}/$fileName")
+        return removePathIfExists("${DownloadFolder.directoryPath()}/$fileName")
     }
 
     actual fun removePartialFile(destinationFileName: String): Boolean {
-        val destinationPath = "${downloadsDirectoryPath()}/$destinationFileName"
+        val destinationPath = "${DownloadFolder.directoryPath()}/$destinationFileName"
         DownloadSubtitleStorage(NSURL.fileURLWithPath(destinationPath).absoluteString!!).remove()
         onMain { BackgroundDownloads.discard(destinationFileName) }
         removePathIfExists(resumeDataPath(destinationFileName))
@@ -124,16 +124,16 @@ internal actual object DownloadsPlatformDownloader {
         val fileName = destinationFileName.trim().takeIf { it.isNotBlank() }
             ?: localFileUri?.toLocalPath()?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
             ?: return null
-        val currentPath = "${downloadsDirectoryPath()}/$fileName"
-        return if (NSFileManager.defaultManager.fileExistsAtPath(currentPath)) {
-            NSURL.fileURLWithPath(currentPath).absoluteString ?: "file://$currentPath"
-        } else {
-            null
-        }
+        // The folder may have changed since; app storage is where everything went before.
+        return listOf(DownloadFolder.directoryPath(), appStorageDirectoryPath())
+            .distinct()
+            .map { "$it/$fileName" }
+            .firstOrNull { NSFileManager.defaultManager.fileExistsAtPath(it) }
+            ?.toFileUri()
     }
 
     actual fun openDownloadsDirectory(): Boolean {
-        val url = NSURL.fileURLWithPath(downloadsDirectoryPath())
+        val url = NSURL.fileURLWithPath(DownloadFolder.directoryPath())
         UIApplication.sharedApplication.openURL(
             url = url,
             options = emptyMap<Any?, Any>(),
@@ -171,7 +171,7 @@ private object DownloadSubtitlePreparation {
 
     fun start(downloadId: String, request: DownloadPlatformRequest) {
         jobs.remove(downloadId)?.cancel()
-        val destinationPath = "${downloadsDirectoryPath()}/${request.destinationFileName}"
+        val destinationPath = "${DownloadFolder.directoryPath()}/${request.destinationFileName}"
         val destinationUri = NSURL.fileURLWithPath(destinationPath).absoluteString ?: return
         val job = scope.launch {
             try {
@@ -313,7 +313,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         }
 
         // Finished while no callbacks were attached, e.g. with the app in the background.
-        val destinationPath = "${downloadsDirectoryPath()}/$fileName"
+        val destinationPath = "${DownloadFolder.directoryPath()}/$fileName"
         if (NSFileManager.defaultManager.fileExistsAtPath(destinationPath)) {
             callbacks.onSuccess(destinationPath.toFileUri(), fileSizeOrNull(destinationPath))
             return
@@ -411,7 +411,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
             return
         }
 
-        val destinationPath = "${downloadsDirectoryPath()}/$fileName"
+        val destinationPath = "${DownloadFolder.directoryPath()}/$fileName"
         removePathIfExists(destinationPath)
         val moved = NSFileManager.defaultManager.moveItemAtPath(temporaryPath, destinationPath, null)
         if (!moved) {
@@ -550,19 +550,6 @@ private fun onMain(block: () -> Unit) {
     } else {
         dispatch_async(dispatch_get_main_queue()) { block() }
     }
-}
-
-@OptIn(ExperimentalForeignApi::class)
-private fun downloadsDirectoryPath(): String {
-    val root = NSHomeDirectory().trimEnd('/')
-    val path = "$root/Documents/nuvio_downloads"
-    NSFileManager.defaultManager.createDirectoryAtPath(
-        path = path,
-        withIntermediateDirectories = true,
-        attributes = null,
-        error = null,
-    )
-    return path
 }
 
 private fun String.toFileUri(): String = NSURL.fileURLWithPath(this).absoluteString ?: "file://$this"

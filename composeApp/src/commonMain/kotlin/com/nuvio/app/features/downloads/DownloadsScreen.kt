@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PhoneIphone
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.Icon
@@ -44,6 +45,9 @@ import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.settings.SettingsGroup
+import com.nuvio.app.features.settings.SettingsGroupDivider
+import com.nuvio.app.features.settings.SettingsNavigationRow
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -63,6 +67,11 @@ fun DownloadsScreen(
     var selectedShowId by rememberSaveable(initialShowId) { mutableStateOf(initialShowId) }
     var downloadPendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
     val openDownloadsDirectoryFailedText = stringResource(Res.string.downloads_open_directory_failed)
+    val folderNotWritableText = stringResource(Res.string.downloads_location_not_writable)
+    val downloadFolderName by DownloadFolder.folderName.collectAsStateWithLifecycle()
+    val downloadFolderPicker = rememberDownloadFolderPicker(
+        onRejected = { NuvioToastController.show(folderNotWritableText) },
+    )
 
     val completedEpisodes = remember(uiState.items) {
         uiState.completedItems
@@ -114,6 +123,8 @@ fun DownloadsScreen(
         if (selectedShowId == null) {
             downloadsRootContent(
                 uiState = uiState,
+                downloadFolderName = downloadFolderName,
+                downloadFolderPicker = downloadFolderPicker,
                 onOpenDownload = onOpenDownload,
                 onOpenShow = { showId, title ->
                     onNavigateToShow?.invoke(showId, title) ?: run { selectedShowId = showId }
@@ -154,6 +165,8 @@ fun DownloadsScreen(
 
 private fun LazyListScope.downloadsRootContent(
     uiState: DownloadsUiState,
+    downloadFolderName: String?,
+    downloadFolderPicker: DownloadFolderPickerHandle,
     onOpenDownload: (DownloadItem) -> Unit,
     onOpenShow: (showId: String, title: String) -> Unit,
     onDeleteDownload: (String) -> Unit,
@@ -169,6 +182,15 @@ private fun LazyListScope.downloadsRootContent(
             }
         }
         .sortedBy { (item, _) -> item.title.lowercase() }
+
+    if (downloadFolderPicker.isSupported) {
+        item(key = "download-location") {
+            DownloadLocationGroup(
+                folderName = downloadFolderName,
+                onChooseFolder = downloadFolderPicker::launch,
+            )
+        }
+    }
 
     if (activeItems.isNotEmpty()) {
         item {
@@ -490,6 +512,36 @@ private fun downloadDisplaySubtitle(
         item.episodeTitle?.trim().orEmpty().takeIf { it.isNotBlank() && it != displayTitle },
         item.title.trim().takeIf { it.isNotBlank() && it != displayTitle },
     ).filterNotNull().joinToString(" • ")
+}
+
+/** Where new downloads are saved; existing ones stay where they were downloaded. */
+@Composable
+private fun DownloadLocationGroup(
+    folderName: String?,
+    onChooseFolder: () -> Unit,
+) {
+    SettingsGroup(
+        isTablet = false,
+        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        SettingsNavigationRow(
+            title = stringResource(Res.string.downloads_location_title),
+            description = folderName ?: stringResource(Res.string.downloads_location_app_storage),
+            icon = Icons.Rounded.Folder,
+            isTablet = false,
+            onClick = onChooseFolder,
+        )
+        if (folderName != null) {
+            SettingsGroupDivider(isTablet = false)
+            SettingsNavigationRow(
+                title = stringResource(Res.string.downloads_location_use_app_storage),
+                description = null,
+                icon = Icons.Rounded.PhoneIphone,
+                isTablet = false,
+                onClick = DownloadFolder::useAppStorage,
+            )
+        }
+    }
 }
 
 @Composable

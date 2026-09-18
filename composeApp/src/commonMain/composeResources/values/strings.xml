@@ -626,6 +626,10 @@
     <string name="downloads_episode_count">%1$d downloaded episode(s)</string>
     <string name="downloads_open_directory">Open downloads folder</string>
     <string name="downloads_open_directory_failed">Couldn&apos;t open downloads folder</string>
+    <string name="downloads_location_title">Download location</string>
+    <string name="downloads_location_app_storage">App storage</string>
+    <string name="downloads_location_use_app_storage">Use app storage</string>
+    <string name="downloads_location_not_writable">Can't save downloads to that folder</string>
     <string name="downloads_section_active">Active</string>
     <string name="downloads_section_movies">Movies</string>
     <string name="downloads_section_shows">Shows</string>
