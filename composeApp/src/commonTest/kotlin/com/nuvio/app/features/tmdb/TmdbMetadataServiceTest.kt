@@ -165,6 +165,58 @@ class TmdbMetadataServiceTest {
     }
 
     @Test
+    fun `generated tmdb episode placeholders are recognised only for their own episode`() {
+        assertTrue(isGeneratedTmdbEpisodeTitle("Episode 12", 12))
+        assertTrue(isGeneratedTmdbEpisodeTitle("Эпизод 1", 1))
+        assertTrue(isGeneratedTmdbEpisodeTitle("Épisode 3", 3))
+        assertTrue(isGeneratedTmdbEpisodeTitle("  Folge 7  ", 7))
+        assertFalse(isGeneratedTmdbEpisodeTitle("Episode 12", 2))
+        assertFalse(isGeneratedTmdbEpisodeTitle("The One Where They Meet", 4))
+        assertFalse(isGeneratedTmdbEpisodeTitle("Уходящая в закат глава 1", 1))
+        assertFalse(isGeneratedTmdbEpisodeTitle(null, 1))
+        assertFalse(isGeneratedTmdbEpisodeTitle("Episode 1", null))
+    }
+
+    @Test
+    fun `applyEnrichment keeps the addon episode title over a generated tmdb placeholder`() {
+        val base = MetaDetails(
+            id = "tt1234567",
+            type = "series",
+            name = "Original",
+            videos = listOf(
+                MetaVideo(id = "ep1", title = "The Real Title", season = 1, episode = 1),
+                MetaVideo(id = "ep2", title = "Addon Two", season = 1, episode = 2),
+            ),
+        )
+        val episodes = mapOf(
+            (1 to 1) to TmdbEpisodeEnrichment(
+                title = "Episode 1",
+                overview = null,
+                thumbnail = null,
+                airDate = null,
+                runtimeMinutes = null,
+            ),
+            (1 to 2) to TmdbEpisodeEnrichment(
+                title = "TMDB Two",
+                overview = null,
+                thumbnail = null,
+                airDate = null,
+                runtimeMinutes = null,
+            ),
+        )
+
+        val result = TmdbMetadataService.applyEnrichment(
+            meta = base,
+            enrichment = null,
+            episodeMap = episodes,
+            settings = TmdbSettings(enabled = true, useEpisodes = true),
+        )
+
+        assertEquals("The Real Title", result.videos[0].title)
+        assertEquals("TMDB Two", result.videos[1].title)
+    }
+
+    @Test
     fun `applyEnrichment replaces top level release dates only when enabled`() {
         val base = MetaDetails(
             id = "tt1234567",

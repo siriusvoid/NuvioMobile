@@ -860,7 +860,9 @@ object TmdbMetadataService {
                     } else {
                         video.copy(
                             title = if (settings.useEpisodes) {
-                                enrichmentForEpisode.title ?: video.title
+                                enrichmentForEpisode.title
+                                    ?.takeUnless { isGeneratedTmdbEpisodeTitle(it, video.episode) }
+                                    ?: video.title
                             } else {
                                 video.title
                             },
@@ -1459,6 +1461,15 @@ private data class EnrichmentPayload(
     val moreLikeThis: List<MetaPreview>,
     val trailers: List<MetaTrailer>,
 )
+
+/** TMDB fills missing titles with a non-null "Episode N" that ?: can't catch; N must be this episode's. */
+internal fun isGeneratedTmdbEpisodeTitle(title: String?, episodeNumber: Int?): Boolean {
+    if (title.isNullOrBlank() || episodeNumber == null) return false
+    val match = GENERATED_EPISODE_TITLE.matchEntire(title.trim()) ?: return false
+    return match.groupValues[1].toIntOrNull() == episodeNumber
+}
+
+private val GENERATED_EPISODE_TITLE = Regex("""^\p{L}[\p{L}.]{0,14}\s*(\d{1,4})$""")
 
 internal data class TmdbEpisodeEnrichment(
     val title: String?,
