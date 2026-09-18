@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import io.ktor.util.date.GMTDate
 import kotlinx.serialization.json.Json
@@ -156,6 +158,38 @@ object WebDavLibraryRepository {
     }
 
     // ------------------------------------------------------------------ scans
+
+    /**
+     * Lists [folder] again when it seems to be missing an episode, and saves what it
+     * holds now. At most once an hour per folder: a release that really is still
+     * coming out would otherwise be asked about on every look.
+     */
+    suspend fun relistFolder(folder: WebDavFolder): WebDavFolder? {
+        val now = GMTDate().timestamp
+        val due = relistMutex.withLock {
+            val last = relistedAt[folder.key]
+            if (last != null && now - last < RELIST_COOLDOWN_MS) {
+                false
+            } else {
+                relistedAt[folder.key] = now
+                true
+            }
+        }
+        if (!due) return null
+
+        val source = _uiState.value.sources.firstOrNull { it.id == folder.sourceId && it.enabled } ?: return null
+        val password = WebDavStorage.loadPassword(source.id).orEmpty()
+        val scanner = WebDavScanner(source, WebDavClient(source.baseUrl, source.username, password))
+        val relisted = scanner.relistFolder(folder) ?: return null
+        if (relisted.files.map { it.url }.toSet() == folder.files.map { it.url }.toSet()) return relisted
+
+        log.i { "Re-listed ${folder.name}: ${folder.files.size} → ${relisted.files.size} files" }
+        WebDavIndex.mergeFolders(source.id, listOf(relisted))
+        return relisted
+    }
+
+    private val relistMutex = Mutex()
+    private val relistedAt = mutableMapOf<String, Long>()
 
     fun scan(sourceId: String, windowStart: Int = 0) {
         if (scanJobs[sourceId]?.isActive == true) return
@@ -696,6 +730,7 @@ object WebDavLibraryRepository {
 
     /** A listing shorter than this fraction of the last one is treated as truncated. */
     private const val LISTING_SHRINK_FLOOR = 0.8
+    private const val RELIST_COOLDOWN_MS = 60L * 60L * 1000L
 
     /** Upper bound on the folders one scan may question, so a bad listing cannot storm. */
     private const val MAX_DELETION_CHECKS = 20
