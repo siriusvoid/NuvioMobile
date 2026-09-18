@@ -9,6 +9,9 @@ internal expect object DownloadFolder {
     val folderName: StateFlow<String?>
 
     fun useAppStorage()
+
+    /** Space free for new downloads where they are saved now, or null when unknown. */
+    fun freeSpaceBytes(): Long?
 }
 
 internal interface DownloadFolderPickerHandle {

@@ -241,22 +241,30 @@ internal object WebDavAddonService {
         val requestedSeason = parts.season ?: match.season
 
         return folder.files.filter { file ->
-            val parsed = AnimeReleaseParser.parseFile(file.fileName)
-            val parsedEpisode = parsed.episode ?: return@filter false
-
-            // A file that names its own season — specials as season 0 — is placed by it;
-            // otherwise the folder's season stands in. Without this a special would also
-            // answer for the numbered episode with the same number.
-            val fileSeason = parsed.season ?: match.season
-            if (requestedSeason != null && fileSeason != null && fileSeason != requestedSeason) {
+            val placement = placeFile(file, match) ?: return@filter false
+            if (requestedSeason != null && placement.season != null && placement.season != requestedSeason) {
                 return@filter false
             }
-
-            // The folder's offset applies to its numbered run, not to specials.
-            val offset = if (parsed.season == 0) 0 else match.episodeOffset
-            parsedEpisode + offset == requestedEpisode
+            placement.episode == requestedEpisode
         }
     }
+
+    /** The episode a file of a series folder plays as, or null when its name gives no number. */
+    fun placeFile(file: WebDavFile, match: WebDavMatch): FilePlacement? {
+        val parsed = AnimeReleaseParser.parseFile(file.fileName)
+        val parsedEpisode = parsed.episode ?: return null
+
+        // A file that names its own season — specials as season 0 — is placed by it;
+        // otherwise the folder's season stands in. Without this a special would also
+        // answer for the numbered episode with the same number.
+        val fileSeason = parsed.season ?: match.season
+
+        // The folder's offset applies to its numbered run, not to specials.
+        val offset = if (parsed.season == 0) 0 else match.episodeOffset
+        return FilePlacement(season = fileSeason, episode = parsedEpisode + offset)
+    }
+
+    data class FilePlacement(val season: Int?, val episode: Int)
 
     private fun buildStream(
         file: WebDavFile,

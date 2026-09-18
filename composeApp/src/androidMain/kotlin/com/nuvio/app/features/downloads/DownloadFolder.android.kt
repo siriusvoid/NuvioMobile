@@ -11,6 +11,8 @@ internal actual object DownloadFolder {
     actual val folderName: StateFlow<String?> = MutableStateFlow<String?>(null).asStateFlow()
 
     actual fun useAppStorage() = Unit
+
+    actual fun freeSpaceBytes(): Long? = null
 }
 
 @Composable

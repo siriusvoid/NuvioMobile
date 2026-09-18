@@ -574,7 +574,7 @@ private fun statusText(item: DownloadItem): String {
     }
 }
 
-private fun formatBytes(bytes: Long): String {
+internal fun formatBytes(bytes: Long): String {
     if (bytes <= 0L) return "0 ${localizedByteUnit("B")}"
     val kib = 1024.0
     val mib = kib * 1024.0

@@ -212,6 +212,13 @@ object DownloadsRepository {
         }
     }
 
+    /** Status of the download already made or running for an episode, if there is one. */
+    fun episodeDownloadStatus(parentMetaId: String, seasonNumber: Int, episodeNumber: Int): DownloadStatus? {
+        ensureLoaded()
+        val key = buildLogicalKey(parentMetaId, seasonNumber, episodeNumber)
+        return _uiState.value.items.firstOrNull { it.logicalContentKey == key }?.status
+    }
+
     fun pauseDownload(downloadId: String) {
         ensureLoaded()
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return

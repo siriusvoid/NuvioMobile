@@ -18,6 +18,7 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSHomeDirectory
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLBookmarkResolutionWithoutUI
+import platform.Foundation.NSURLVolumeAvailableCapacityForImportantUsageKey
 import platform.Foundation.NSUserDefaults
 import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.UIKit.UIDocumentPickerViewController
@@ -70,6 +71,13 @@ internal actual object DownloadFolder {
         replaceChosen(Chosen(url, path, accessed))
         return true
     }
+
+    // "Important usage" counts space iOS would free on demand, as the Settings app does.
+    actual fun freeSpaceBytes(): Long? =
+        (NSURL.fileURLWithPath(directoryPath())
+            .resourceValuesForKeys(listOf(NSURLVolumeAvailableCapacityForImportantUsageKey), null)
+            ?.get(NSURLVolumeAvailableCapacityForImportantUsageKey) as? Number)
+            ?.toLong()
 
     actual fun useAppStorage() {
         NSUserDefaults.standardUserDefaults.removeObjectForKey(bookmarkKey)
