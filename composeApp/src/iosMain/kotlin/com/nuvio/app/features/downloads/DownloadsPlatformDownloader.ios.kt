@@ -48,6 +48,11 @@ private const val BACKGROUND_SESSION_IDENTIFIER = "com.nuvio.app.downloads"
 private const val DOWNLOAD_RESOURCE_TIMEOUT_SECONDS = 24.0 * 60.0 * 60.0
 private const val PROGRESS_MIN_INTERVAL_SECONDS = 0.5
 private const val PROGRESS_MIN_BYTE_DELTA = 512L * 1024L
+/**
+ * Transfers handed to iOS at once; the rest wait here. The session's own
+ * per-host limit is ignored by the background download daemon.
+ */
+private const val MAX_ACTIVE_TRANSFERS = 3
 
 private val backgroundSessionCompletionHandlers = mutableMapOf<String, () -> Unit>()
 
@@ -240,6 +245,16 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
     private var existingTasksLoaded = false
     private val startsAwaitingExistingTasks = linkedMapOf<String, () -> Unit>()
     private val active = mutableMapOf<String, ActiveDownload>()
+
+    /**
+     * Starts past [MAX_ACTIVE_TRANSFERS], so a season comes down a few episodes at
+     * a time and a server capping connections isn't hit with all of them. One that
+     * starts while the app is in the background is left to iOS to schedule, which
+     * may wait until the app is opened again.
+     */
+    private val queued = mutableMapOf<String, QueuedStart>()
+
+    private class QueuedStart(val item: DownloadItem, val start: () -> Unit)
     private val pendingPauses = mutableMapOf<String, PendingPause>()
     private val discardedFileNames = mutableSetOf<String>()
 
@@ -296,6 +311,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         callbacks: DownloadCallbacks,
     ) {
         val session = ensureSession()
+        queued.remove(downloadId)
         if (!existingTasksLoaded) {
             startsAwaitingExistingTasks[downloadId] = { start(downloadId, request, callbacks) }
             return
@@ -321,6 +337,11 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
             return
         }
 
+        if (active.size >= MAX_ACTIVE_TRANSFERS) {
+            queued[downloadId] = QueuedStart(request.item) { start(downloadId, request, callbacks) }
+            return
+        }
+
         val resumeData = takeResumeData(fileName)
         val task = if (resumeData != null) {
             session.downloadTaskWithResumeData(resumeData)
@@ -342,8 +363,10 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
 
     fun pause(downloadId: String) {
         startsAwaitingExistingTasks.remove(downloadId)
+        queued.remove(downloadId)
         pendingPauses[downloadId]?.deferredStart = null
         val download = active.remove(downloadId) ?: return
+        startQueued()
 
         val pending = PendingPause(download.fileName)
         pendingPauses[downloadId] = pending
@@ -355,6 +378,23 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
                 }
                 pending.deferredStart?.invoke()
             }
+        }
+    }
+
+    /** Fills free transfer slots from the queue, oldest download first, then by episode. */
+    private fun startQueued() {
+        while (active.size < MAX_ACTIVE_TRANSFERS && queued.isNotEmpty()) {
+            val (downloadId, next) = queued.entries
+                .minWith(
+                    compareBy<Map.Entry<String, QueuedStart>>(
+                        { it.value.item.createdAtEpochMs },
+                        { it.value.item.seasonNumber ?: 0 },
+                        { it.value.item.episodeNumber ?: 0 },
+                    ),
+                )
+                .toPair()
+            queued.remove(downloadId)
+            next.start()
         }
     }
 
@@ -437,6 +477,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
             val download = active[downloadId]?.takeIf { it.owns(downloadTask) } ?: return@onMain
             active.remove(downloadId)
             download.callbacks?.onSuccess(destinationPath.toFileUri(), finalSize)
+            startQueued()
         }
     }
 
@@ -480,6 +521,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
             callbacks?.onFailure(
                 error.localizedDescription.ifBlank { runBlocking { getString(Res.string.download_failed) } },
             )
+            startQueued()
         }
     }
 
@@ -495,6 +537,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         val download = active[downloadId]?.takeIf { it.owns(task) } ?: return
         active.remove(downloadId)
         download.callbacks?.onFailure(message)
+        startQueued()
     }
 
     private fun reportProgress(

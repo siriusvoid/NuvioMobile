@@ -193,7 +193,8 @@ object DownloadsRepository {
             fileName = fileName,
             status = DownloadStatus.Downloading,
             downloadedBytes = 0L,
-            totalBytes = null,
+            // Known up front when the source lists it, so queued downloads count toward the total.
+            totalBytes = stream.behaviorHints.videoSize?.takeIf { it > 0L },
             errorMessage = null,
             createdAtEpochMs = now,
             updatedAtEpochMs = now,
@@ -311,7 +312,7 @@ object DownloadsRepository {
                     } else {
                         current.copy(
                             downloadedBytes = downloadedBytes.coerceAtLeast(0L),
-                            totalBytes = totalBytes?.takeIf { it > 0L },
+                            totalBytes = totalBytes?.takeIf { it > 0L } ?: current.totalBytes,
                             updatedAtEpochMs = DownloadsClock.nowEpochMs(),
                             errorMessage = null,
                         )
