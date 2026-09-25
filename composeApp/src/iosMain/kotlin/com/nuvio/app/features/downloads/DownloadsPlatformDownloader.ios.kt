@@ -52,7 +52,7 @@ private const val PROGRESS_MIN_BYTE_DELTA = 512L * 1024L
  * Transfers handed to iOS at once; the rest wait here. The session's own
  * per-host limit is ignored by the background download daemon.
  */
-private const val MAX_ACTIVE_TRANSFERS = 3
+private const val MAX_ACTIVE_TRANSFERS = 1
 
 private val backgroundSessionCompletionHandlers = mutableMapOf<String, () -> Unit>()
 
@@ -273,8 +273,8 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
     private val active = mutableMapOf<String, ActiveDownload>()
 
     /**
-     * Starts past [MAX_ACTIVE_TRANSFERS], so a season comes down a few episodes at
-     * a time and a server capping connections isn't hit with all of them. One that
+     * Starts past [MAX_ACTIVE_TRANSFERS], so a season comes down one episode at a
+     * time and a server capping connections isn't hit with all of them. One that
      * starts while the app is in the background is left to iOS to schedule, which
      * may wait until the app is opened again.
      */
