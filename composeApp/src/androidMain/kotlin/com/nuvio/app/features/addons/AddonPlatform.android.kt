@@ -287,6 +287,7 @@ actual suspend fun httpRequestRaw(
     body: String,
     followRedirects: Boolean,
     maxResponseBodyBytes: Int,
+    bodyBytes: ByteArray?,
 ): RawHttpResponse =
     withContext(Dispatchers.IO) {
         val normalizedMethod = method.uppercase()
@@ -304,7 +305,8 @@ actual suspend fun httpRequestRaw(
         val request = if (sendsBody) {
             val contentType = sanitizedHeaders.getHeaderIgnoreCase("Content-Type")
                 ?: if (normalizedMethod == "POST") "application/x-www-form-urlencoded" else "application/json"
-            val requestBody = body.toByteArray(Charsets.UTF_8).toRequestBody(contentType.toMediaType())
+            val requestBody = (bodyBytes ?: body.toByteArray(Charsets.UTF_8))
+                .toRequestBody(contentType.toMediaType())
             builder.method(normalizedMethod, requestBody)
         } else {
             builder.method(normalizedMethod, null)
@@ -327,11 +329,19 @@ actual suspend fun httpRequestRaw(
         }
         try {
             call.execute().use { response ->
+                val contentType = response.body?.contentType()
+                val readResult = response.body?.byteStream()?.use { stream ->
+                    readAtMostBytes(stream, maxResponseBodyBytes.coerceAtLeast(0))
+                } ?: LimitedReadResult(ByteArray(0), truncated = false)
+                val charset = contentType?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+                val decoded = runCatching { String(readResult.bytes, charset) }
+                    .getOrElse { String(readResult.bytes, Charsets.UTF_8) }
                 RawHttpResponse(
                     status = response.code,
                     statusText = response.message,
                     url = response.request.url.toString(),
-                    body = readResponseBodyLimited(response.body, maxResponseBodyBytes),
+                    body = if (readResult.truncated) "$decoded\n...[truncated]" else decoded,
+                    bodyBytes = readResult.bytes,
                     headers = response.headers.toMultimap().mapValues { (_, values) ->
                         values.joinToString(",")
                     }.mapKeys { (name, _) ->
