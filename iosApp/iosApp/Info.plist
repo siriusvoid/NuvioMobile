@@ -32,6 +32,10 @@
 		<string>ja</string>
 		<string>vi</string>
 	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>$(PRODUCT_BUNDLE_IDENTIFIER).downloads.*</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -64,8 +68,6 @@
 	<array>
 		<string>audio</string>
 	</array>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<false/>
 </dict>
