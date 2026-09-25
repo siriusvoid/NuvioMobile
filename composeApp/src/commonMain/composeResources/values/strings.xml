@@ -1660,6 +1660,8 @@
     <string name="downloads_folder_all_downloaded">All downloaded</string>
     <string name="downloads_folder_nothing_new">Every episode in this folder is already downloaded</string>
     <string name="downloads_live_progress_count">%1$d of %2$d</string>
+    <string name="downloads_folder_season">Season %1$d</string>
+    <string name="downloads_folder_specials">Specials</string>
     <string name="downloads_folder_not_enough_space">Not enough space: needs %1$s, %2$s free</string>
     <plurals name="downloads_folder_episode_count">
         <item quantity="one">%1$d episode</item>

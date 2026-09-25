@@ -1567,6 +1567,8 @@
     <string name="downloads_folder_all_downloaded">Всё скачано</string>
     <string name="downloads_folder_nothing_new">Все серии из этой папки уже скачаны</string>
     <string name="downloads_live_progress_count">%1$d из %2$d</string>
+    <string name="downloads_folder_season">%1$d сезон</string>
+    <string name="downloads_folder_specials">Спецвыпуски</string>
     <string name="downloads_folder_not_enough_space">Недостаточно места: нужно %1$s, свободно %2$s</string>
     <plurals name="downloads_folder_episode_count">
         <item quantity="one">%1$d серия</item>

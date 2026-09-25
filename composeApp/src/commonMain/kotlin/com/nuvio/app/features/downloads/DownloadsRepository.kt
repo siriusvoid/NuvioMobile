@@ -166,7 +166,11 @@ object DownloadsRepository {
         val fileName = uniqueFileName(
             // A show's episodes share a folder named after it; a movie gets its own.
             folder = if (isIos) {
-                if (isEpisode) displayTitle.toSafeFileName().ifBlank { "Download" }.fitFileNameLimit() else baseName.fitFileNameLimit()
+                if (isEpisode) {
+                    episodeFolder(displayTitle, seasonNumber!!, parentMetaType, parentMetaId)
+                } else {
+                    baseName.fitFileNameLimit()
+                }
             } else {
                 null
             },
@@ -607,6 +611,29 @@ private fun uniqueFileName(folder: String?, baseName: String, extension: String,
         attempt++
     }
     return candidate
+}
+
+/**
+ * `Show`, or `Show/Season 2` when the show has more than one season; specials go
+ * to `Show/Specials` either way. Seasons are counted from the show's episode list,
+ * not from what is downloaded, so no finished file ever has to move.
+ */
+private fun episodeFolder(title: String, seasonNumber: Int, metaType: String, metaId: String): String {
+    val show = title.toSafeFileName().ifBlank { "Download" }.fitFileNameLimit()
+    val subfolder = when {
+        seasonNumber == 0 -> runBlocking { getString(Res.string.downloads_folder_specials) }
+        hasSeveralSeasons(metaType, metaId, seasonNumber) ->
+            runBlocking { getString(Res.string.downloads_folder_season, seasonNumber) }
+        else -> null
+    }
+    return listOfNotNull(show, subfolder?.toSafeFileName()).joinToString("/")
+}
+
+private fun hasSeveralSeasons(metaType: String, metaId: String, seasonNumber: Int): Boolean {
+    // Without the episode list at hand, a season past the first still tells.
+    if (seasonNumber > 1) return true
+    val videos = MetaDetailsRepository.peek(metaType, metaId)?.videos.orEmpty()
+    return videos.mapNotNullTo(mutableSetOf()) { video -> video.season?.takeIf { it > 0 } }.size > 1
 }
 
 private fun releaseYear(metaType: String, metaId: String): Int? {

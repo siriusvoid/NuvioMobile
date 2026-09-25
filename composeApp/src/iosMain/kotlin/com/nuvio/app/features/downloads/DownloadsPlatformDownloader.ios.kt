@@ -650,17 +650,26 @@ private fun createParentDirectory(path: String) {
     )
 }
 
-/** Drops a show or movie folder once its last file is gone; never a downloads folder itself. */
+/**
+ * Drops a season, show or movie folder once its last file is gone, then the show
+ * folder above a season's if that leaves it empty; never a downloads folder itself.
+ */
 @OptIn(ExperimentalForeignApi::class)
 private fun removeFolderIfEmpty(filePath: String) {
-    val folder = filePath.substringBeforeLast('/')
-    if (folder == DownloadFolder.directoryPath().trimEnd('/') || folder == appStorageDirectoryPath().trimEnd('/')) return
+    val roots = setOf(DownloadFolder.directoryPath().trimEnd('/'), appStorageDirectoryPath().trimEnd('/'))
+    // Outside both roots (a folder chosen earlier), where that folder ends isn't
+    // known, so only the file's own folder may go.
+    var levels = if (roots.any { filePath.startsWith("$it/") }) Int.MAX_VALUE else 1
     val manager = NSFileManager.defaultManager
-    val remaining = manager.contentsOfDirectoryAtPath(folder, null)
-        ?.filterIsInstance<String>()
-        ?.filterNot { it == ".DS_Store" }
-        ?: return
-    if (remaining.isEmpty()) manager.removeItemAtPath(folder, null)
+    var folder = filePath.substringBeforeLast('/')
+    while (levels-- > 0 && folder.isNotEmpty() && folder !in roots) {
+        val remaining = manager.contentsOfDirectoryAtPath(folder, null)
+            ?.filterIsInstance<String>()
+            ?.filterNot { it == ".DS_Store" }
+            ?: return
+        if (remaining.isNotEmpty() || !manager.removeItemAtPath(folder, null)) return
+        folder = folder.substringBeforeLast('/')
+    }
 }
 
 private fun writeResumeData(fileName: String, data: NSData) {
