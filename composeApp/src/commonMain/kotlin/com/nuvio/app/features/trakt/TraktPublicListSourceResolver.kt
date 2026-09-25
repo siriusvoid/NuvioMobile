@@ -32,6 +32,7 @@ import nuvio.composeapp.generated.resources.collections_trakt_missing_numeric_id
 import nuvio.composeapp.generated.resources.collections_trakt_public_list
 import nuvio.composeapp.generated.resources.collections_trakt_rate_limit_reached
 import nuvio.composeapp.generated.resources.collections_trakt_request_failed
+import org.jetbrains.compose.resources.getPluralString
 import org.jetbrains.compose.resources.getString
 import kotlin.math.roundToInt
 
@@ -258,8 +259,8 @@ object TraktPublicListSourceResolver {
                 ?: getString(Res.string.collections_editor_trakt_fallback_title, id)
             val owner = user?.username?.takeIf { it.isNotBlank() }
             val stats = buildList {
-                itemCount?.let { add(getString(Res.string.collections_trakt_list_items_count, it)) }
-                (likeCount ?: likes)?.let { add(getString(Res.string.collections_trakt_list_likes_count, it)) }
+                itemCount?.let { add(getPluralString(Res.plurals.collections_trakt_list_items_count, it, it)) }
+                (likeCount ?: likes)?.let { add(getPluralString(Res.plurals.collections_trakt_list_likes_count, it, it)) }
             }
             val subtitle = (listOfNotNull(owner) + stats).joinToString(" • ")
                 .ifBlank { getString(Res.string.collections_trakt_public_list) }

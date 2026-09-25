@@ -39,6 +39,7 @@ import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.features.trakt.TraktCommentReview
 import kotlinx.coroutines.flow.distinctUntilChanged
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -235,7 +236,7 @@ private fun CommentCard(
                         )
                     }
                     Text(
-                        text = stringResource(Res.string.detail_comments_likes, review.likes),
+                        text = pluralStringResource(Res.plurals.detail_comments_likes, review.likes, review.likes),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                         maxLines = 1,

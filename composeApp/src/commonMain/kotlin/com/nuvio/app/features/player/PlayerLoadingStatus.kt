@@ -12,6 +12,7 @@ import nuvio.composeapp.generated.resources.player_loading_subtitles_from
 import nuvio.composeapp.generated.resources.player_loading_subtitles_progress
 import nuvio.composeapp.generated.resources.player_loading_subtitles_addon
 import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 internal fun playerLoadingStatusResource(
@@ -42,7 +43,7 @@ internal fun subtitleLoadingStatusMessage(): String {
 @Composable
 internal fun subtitleLoadingStatusMessage(progress: SubtitleLoadingProgress?): String = when {
     progress == null -> stringResource(Res.string.player_loading_subtitles)
-    progress.completed == 0 -> stringResource(Res.string.player_loading_subtitles_from, progress.total)
+    progress.completed == 0 -> pluralStringResource(Res.plurals.player_loading_subtitles_from, progress.total, progress.total)
     !progress.addonName.isNullOrBlank() -> stringResource(
         Res.string.player_loading_subtitles_addon,
         progress.addonName,

@@ -22,8 +22,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nuvio.composeapp.generated.resources.Res
-import nuvio.composeapp.generated.resources.player_torrent_stats
-import org.jetbrains.compose.resources.stringResource
+import nuvio.composeapp.generated.resources.player_torrent_peers
+import nuvio.composeapp.generated.resources.player_torrent_seeds
+import org.jetbrains.compose.resources.pluralStringResource
 
 @Composable
 fun P2pStatsOverlay(
@@ -72,12 +73,7 @@ fun P2pStatsOverlay(
                 )
             }
             Text(
-                text = stringResource(
-                    Res.string.player_torrent_stats,
-                    peers,
-                    seeds,
-                    (totalProgress * 100).toInt(),
-                ),
+                text = "${torrentPeerInfo(seeds = seeds, peers = peers)} · ${(totalProgress * 100).toInt()}%",
                 color = Color.White.copy(alpha = 0.6f),
                 fontSize = 10.sp,
             )
@@ -130,3 +126,9 @@ fun P2pLoadingStatus(
         }
     }
 }
+
+@Composable
+internal fun torrentPeerInfo(seeds: Int, peers: Int): String =
+    pluralStringResource(Res.plurals.player_torrent_seeds, seeds, seeds) +
+        " · " +
+        pluralStringResource(Res.plurals.player_torrent_peers, peers, peers)

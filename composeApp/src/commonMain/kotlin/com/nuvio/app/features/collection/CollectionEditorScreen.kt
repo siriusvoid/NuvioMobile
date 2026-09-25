@@ -71,6 +71,7 @@ import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.trakt.TraktPublicListSearchResult
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
@@ -558,8 +559,9 @@ private fun FolderListItem(
                 Spacer(modifier = Modifier.width(12.dp))
             }
             Column(modifier = Modifier.weight(1f)) {
-                val summary = stringResource(
-                    Res.string.collections_editor_source_count,
+                val summary = pluralStringResource(
+                    Res.plurals.collections_editor_source_count,
+                    folder.resolvedSources.size,
                     folder.resolvedSources.size,
                     posterShapeLabel(folder.posterShape),
                 )
@@ -989,7 +991,7 @@ private fun CatalogPickerScreen(
                     subtitle = if (selectedCount > 0) {
                         stringResource(Res.string.collections_editor_catalog_selected_count, selectedCount)
                     } else {
-                        stringResource(Res.string.collections_editor_catalog_count, catalogs.size)
+                        pluralStringResource(Res.plurals.collections_editor_catalog_count, catalogs.size, catalogs.size)
                     },
                 ) {
                     catalogs.forEachIndexed { index, catalog ->

@@ -29,6 +29,7 @@ import nuvio.composeapp.generated.resources.settings_notifications_sending_test
 import nuvio.composeapp.generated.resources.settings_notifications_test_for_title
 import nuvio.composeapp.generated.resources.settings_notifications_test_requires_saved_show
 import nuvio.composeapp.generated.resources.settings_notifications_test_title
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 internal fun LazyListScope.notificationsSettingsContent(
@@ -102,7 +103,7 @@ private fun NotificationTestCard(
                 )
                 Text(
                     text = if (uiState.isEnabled) {
-                        stringResource(Res.string.settings_notifications_scheduled_count, uiState.scheduledCount)
+                        pluralStringResource(Res.plurals.settings_notifications_scheduled_count, uiState.scheduledCount, uiState.scheduledCount)
                     } else {
                         stringResource(Res.string.settings_notifications_disabled_in_app)
                     },

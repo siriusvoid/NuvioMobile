@@ -76,6 +76,7 @@ import nuvio.composeapp.generated.resources.plugins_section_providers
 import nuvio.composeapp.generated.resources.plugins_test_error_title
 import nuvio.composeapp.generated.resources.plugins_test_failed
 import nuvio.composeapp.generated.resources.plugins_test_results_count
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -130,8 +131,8 @@ fun PluginsSettingsPageContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                NuvioInfoBadge(text = stringResource(Res.string.plugins_badge_repos, sortedRepos.size))
-                NuvioInfoBadge(text = stringResource(Res.string.plugins_badge_providers, sortedScrapers.size))
+                NuvioInfoBadge(text = pluralStringResource(Res.plurals.plugins_badge_repos, sortedRepos.size, sortedRepos.size))
+                NuvioInfoBadge(text = pluralStringResource(Res.plurals.plugins_badge_providers, sortedScrapers.size, sortedScrapers.size))
                 NuvioInfoBadge(
                     text = if (uiState.pluginsEnabled) {
                         stringResource(Res.string.plugins_badge_enabled)
@@ -314,7 +315,7 @@ fun PluginsSettingsPageContent(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        NuvioInfoBadge(text = stringResource(Res.string.plugins_badge_providers, repo.scraperCount))
+                        NuvioInfoBadge(text = pluralStringResource(Res.plurals.plugins_badge_providers, repo.scraperCount, repo.scraperCount))
                         if (repo.isRefreshing) {
                             NuvioInfoBadge(text = stringResource(Res.string.plugins_badge_refreshing))
                         }
