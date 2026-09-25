@@ -7,6 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.p2p.P2pStreamRequest
@@ -663,7 +664,7 @@ private fun buildNowPlayingSubtitle(
 
     val episodeParts = buildList {
         if (seasonNumber != null && episodeNumber != null) {
-            add("S${seasonNumber}E${episodeNumber}")
+            localizedSeasonEpisodeCode(seasonNumber, episodeNumber)?.let(::add)
         }
         episodeTitle?.takeIf { it.isNotBlank() }?.let { add(it) }
     }
