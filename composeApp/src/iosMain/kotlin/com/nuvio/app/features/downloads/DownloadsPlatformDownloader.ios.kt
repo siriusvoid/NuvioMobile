@@ -40,14 +40,20 @@ import platform.Foundation.setValue
 import platform.Foundation.timeIntervalSince1970
 import platform.Foundation.writeToFile
 import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationState
 import platform.darwin.NSObject
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
 
 private const val BACKGROUND_SESSION_IDENTIFIER = "com.nuvio.app.downloads"
 private const val DOWNLOAD_RESOURCE_TIMEOUT_SECONDS = 24.0 * 60.0 * 60.0
-private const val PROGRESS_MIN_INTERVAL_SECONDS = 0.5
-private const val PROGRESS_MIN_BYTE_DELTA = 512L * 1024L
+/**
+ * Progress reaches the app at most this often. Each report is saved to disk and
+ * re-renders the list and the system progress UI, so a fast transfer isn't let
+ * report every chunk; in the background nothing on screen needs it sooner.
+ */
+private const val PROGRESS_INTERVAL_FOREGROUND_SECONDS = 1.0
+private const val PROGRESS_INTERVAL_BACKGROUND_SECONDS = 5.0
 /**
  * Transfers handed to iOS at once; the rest wait here. The session's own
  * per-host limit is ignored by the background download daemon.
@@ -578,12 +584,16 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         val totalBytes = expectedBytes.takeIf { it > 0L }
         val now = NSDate().timeIntervalSince1970
         val reachedEnd = totalBytes != null && downloadedBytes >= totalBytes
+        val interval = if (UIApplication.sharedApplication.applicationState == UIApplicationState.UIApplicationStateActive) {
+            PROGRESS_INTERVAL_FOREGROUND_SECONDS
+        } else {
+            PROGRESS_INTERVAL_BACKGROUND_SECONDS
+        }
         if (
             !force &&
             download.lastProgressBytes >= 0L &&
             !reachedEnd &&
-            downloadedBytes - download.lastProgressBytes < PROGRESS_MIN_BYTE_DELTA &&
-            now - download.lastProgressTimestampSeconds < PROGRESS_MIN_INTERVAL_SECONDS
+            now - download.lastProgressTimestampSeconds < interval
         ) {
             return
         }
