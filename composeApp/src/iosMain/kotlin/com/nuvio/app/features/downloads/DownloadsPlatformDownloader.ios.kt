@@ -20,6 +20,7 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSHTTPURLResponse
 import platform.Foundation.NSHomeDirectory
 import platform.Foundation.NSMutableURLRequest
+import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.Foundation.NSThread
 import platform.Foundation.NSURL
@@ -40,7 +41,9 @@ import platform.Foundation.setValue
 import platform.Foundation.timeIntervalSince1970
 import platform.Foundation.writeToFile
 import platform.UIKit.UIApplication
+import platform.UIKit.UIApplicationDidBecomeActiveNotification
 import platform.UIKit.UIApplicationState
+import platform.UIKit.UIBackgroundTaskInvalid
 import platform.darwin.NSObject
 import platform.darwin.dispatch_async
 import platform.darwin.dispatch_get_main_queue
@@ -78,6 +81,14 @@ fun handleDownloadsBackgroundEvents(
     }
     backgroundSessionCompletionHandlers[identifier] = completionHandler
     BackgroundDownloads.ensureSession()
+}
+
+/**
+ * Called by DownloadsBackgroundTaskManager.swift as the system progress UI of
+ * downloads starts and ends; while it is up, iOS keeps the app running.
+ */
+fun setDownloadsProgressUiActive(active: Boolean) {
+    onMain { BackgroundDownloads.setKeptAwake(active) }
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -236,6 +247,14 @@ private object DownloadSubtitlePreparation {
  * Downloads run as tasks of one background URLSession, so the system keeps them
  * going while the app is suspended or not running at all.
  *
+ * The system treats a background transfer started while the app is in the
+ * background as discretionary and gives it a fraction of the bandwidth. So one
+ * that would start there runs in an ordinary session of the app instead while
+ * the system progress UI keeps the app running, and moves to the background
+ * session when that UI ends. One that had to start in the background session
+ * anyway is started over from its resume data once the app is opened, which
+ * brings it back to full speed.
+ *
  * Each task carries its download id and file name in its description. That is
  * enough to finish a transfer that outlived the process which started it: the
  * file is moved into place, and the next start of that download finds it there.
@@ -253,17 +272,24 @@ private class ActiveDownload(
     var request: DownloadPlatformRequest?,
     var callbacks: DownloadCallbacks?,
     val resumedFromData: Boolean,
+    /** Runs in the app's own session rather than the background one. */
+    val inApp: Boolean,
+    /** A background transfer started while the app was in the background, so held back by iOS. */
+    val startedInBackground: Boolean,
 ) {
     var lastProgressBytes = -1L
     var lastProgressTimestampSeconds = 0.0
 
     /**
-     * Whether a delegate callback's task is this one. Compared by identifier: the
-     * task object handed to the delegate is not guaranteed to be the same Kotlin
-     * reference as the one the session returned.
+     * Whether a delegate callback's task is this one. Compared by identifier, which
+     * is unique only within a session: the task object handed to the delegate is
+     * not guaranteed to be the same Kotlin reference as the one the session returned.
      */
-    fun owns(other: NSURLSessionTask): Boolean = task.taskIdentifier == other.taskIdentifier
+    fun owns(other: NSURLSessionTask, session: NSURLSession): Boolean =
+        task.taskIdentifier == other.taskIdentifier && inApp == session.isInApp
 }
+
+private val NSURLSession.isInApp: Boolean get() = configuration.identifier == null
 
 /** A pause waiting for its resume data; a start requested meanwhile runs once it is written. */
 private class PendingPause(val fileName: String) {
@@ -274,6 +300,10 @@ private class PendingPause(val fileName: String) {
 @OptIn(ExperimentalForeignApi::class)
 private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadDelegateProtocol {
     private var session: NSURLSession? = null
+    private var inAppSession: NSURLSession? = null
+
+    /** The system progress UI is up, so the app keeps running in the background. */
+    private var keptAwake = false
     private var existingTasksLoaded = false
     private val startsAwaitingExistingTasks = linkedMapOf<String, () -> Unit>()
     private val active = mutableMapOf<String, ActiveDownload>()
@@ -315,6 +345,30 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         return created
     }
 
+    private fun ensureInAppSession(): NSURLSession {
+        inAppSession?.let { return it }
+        val configuration = NSURLSessionConfiguration.defaultSessionConfiguration().apply {
+            timeoutIntervalForResource = DOWNLOAD_RESOURCE_TIMEOUT_SECONDS
+            waitsForConnectivity = true
+            allowsCellularAccess = true
+            allowsExpensiveNetworkAccess = true
+            allowsConstrainedNetworkAccess = true
+        }
+        return NSURLSession.sessionWithConfiguration(
+            configuration = configuration,
+            delegate = this,
+            delegateQueue = NSOperationQueue().apply { maxConcurrentOperationCount = 1 },
+        ).also { inAppSession = it }
+    }
+
+    init {
+        NSNotificationCenter.defaultCenter.addObserverForName(
+            name = UIApplicationDidBecomeActiveNotification,
+            `object` = null,
+            queue = NSOperationQueue.mainQueue,
+        ) { _ -> restartHeldBack() }
+    }
+
     /** Transfers still running from an earlier process, so a start reattaches instead of duplicating them. */
     private fun adoptExistingTasks(tasks: List<NSURLSessionDownloadTask>) {
         tasks.forEach { task ->
@@ -329,6 +383,9 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
                 request = null,
                 callbacks = null,
                 resumedFromData = false,
+                inApp = false,
+                // Unknown, so assumed: a restart costs only a moment.
+                startedInBackground = true,
             )
         }
         existingTasksLoaded = true
@@ -359,6 +416,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         active[downloadId]?.let { running ->
             running.request = request
             running.callbacks = callbacks
+            if (running.startedInBackground && isAppActive()) restart(downloadId, running)
             return
         }
 
@@ -374,12 +432,15 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
             return
         }
 
+        val inBackground = !isAppActive()
+        val inApp = inBackground && keptAwake
+        val taskSession = if (inApp) ensureInAppSession() else session
         val resumeData = takeResumeData(fileName)
         val task = if (resumeData != null) {
-            session.downloadTaskWithResumeData(resumeData)
+            taskSession.downloadTaskWithResumeData(resumeData)
         } else {
             removePathIfExists("$destinationPath.part")
-            session.downloadTaskWithRequest(buildRequest(request))
+            taskSession.downloadTaskWithRequest(buildRequest(request))
         }
         task.taskDescription = downloadIdentity(downloadId, fileName)
         active[downloadId] = ActiveDownload(
@@ -388,19 +449,27 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
             request = request,
             callbacks = callbacks,
             resumedFromData = resumeData != null,
+            inApp = inApp,
+            startedInBackground = inBackground && !inApp,
         )
         if (resumeData == null) callbacks.onProgress(0L, null)
         task.resume()
     }
 
     fun pause(downloadId: String) {
+        pause(downloadId, then = null)
+    }
+
+    /** With [then], the freed slot is kept for it, and it runs once the resume data is written. */
+    private fun pause(downloadId: String, then: (() -> Unit)?) {
         startsAwaitingExistingTasks.remove(downloadId)
         queued.remove(downloadId)
         pendingPauses[downloadId]?.deferredStart = null
         val download = active.remove(downloadId) ?: return
-        startQueued()
+        if (then == null) startQueued()
 
         val pending = PendingPause(download.fileName)
+        pending.deferredStart = then
         pendingPauses[downloadId] = pending
         download.task.cancelByProducingResumeData { resumeData ->
             onMain {
@@ -409,6 +478,47 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
                     writeResumeData(pending.fileName, resumeData)
                 }
                 pending.deferredStart?.invoke()
+            }
+        }
+    }
+
+    /** Stops a transfer and starts it again from its resume data, in whichever session fits now. */
+    private fun restart(downloadId: String, download: ActiveDownload, then: (() -> Unit)? = null) {
+        val request = download.request ?: return
+        val callbacks = download.callbacks ?: return
+        pause(downloadId) {
+            start(downloadId, request, callbacks)
+            then?.invoke()
+        }
+    }
+
+    private fun restartHeldBack() {
+        active.filterValues { it.startedInBackground }.forEach { (downloadId, download) -> restart(downloadId, download) }
+    }
+
+    fun setKeptAwake(value: Boolean) {
+        if (keptAwake == value) return
+        keptAwake = value
+        if (value) return
+
+        // Without the progress UI the app is about to be suspended, and a transfer of
+        // its own session would stop with it: each moves to the background session.
+        val moving = active.filterValues { it.inApp && it.request != null && it.callbacks != null }
+        if (moving.isEmpty()) return
+        val application = UIApplication.sharedApplication
+        var backgroundTaskId = UIBackgroundTaskInvalid
+        backgroundTaskId = application.beginBackgroundTaskWithName("DownloadsHandover") {
+            application.endBackgroundTask(backgroundTaskId)
+            backgroundTaskId = UIBackgroundTaskInvalid
+        }
+        var remaining = moving.size
+        moving.forEach { (downloadId, download) ->
+            restart(downloadId, download) {
+                remaining--
+                if (remaining == 0 && backgroundTaskId != UIBackgroundTaskInvalid) {
+                    application.endBackgroundTask(backgroundTaskId)
+                    backgroundTaskId = UIBackgroundTaskInvalid
+                }
             }
         }
     }
@@ -445,7 +555,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         expectedTotalBytes: Long,
     ) {
         onMain {
-            reportProgress(downloadTask, didResumeAtOffset, expectedTotalBytes, force = true)
+            reportProgress(session, downloadTask, didResumeAtOffset, expectedTotalBytes, force = true)
         }
     }
 
@@ -457,7 +567,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         totalBytesExpectedToWrite: Long,
     ) {
         onMain {
-            reportProgress(downloadTask, totalBytesWritten, totalBytesExpectedToWrite, force = false)
+            reportProgress(session, downloadTask, totalBytesWritten, totalBytesExpectedToWrite, force = false)
         }
     }
 
@@ -478,6 +588,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
             removePathIfExists(temporaryPath)
             onMain {
                 finishWithFailure(
+                    session,
                     downloadTask,
                     runBlocking { getString(Res.string.network_request_failed_http, statusCode) },
                 )
@@ -493,6 +604,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
             removePathIfExists(temporaryPath)
             onMain {
                 finishWithFailure(
+                    session,
                     downloadTask,
                     runBlocking { getString(Res.string.downloads_error_finalize_file_failed) },
                 )
@@ -506,7 +618,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
                 removePathIfExists(destinationPath)
                 return@onMain
             }
-            val download = active[downloadId]?.takeIf { it.owns(downloadTask) } ?: return@onMain
+            val download = active[downloadId]?.takeIf { it.owns(downloadTask, session) } ?: return@onMain
             active.remove(downloadId)
             download.callbacks?.onSuccess(destinationPath.toFileUri(), finalSize)
             startQueued()
@@ -526,7 +638,7 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         onMain {
             val (downloadId, fileName) = task.downloadIdentity() ?: return@onMain
             val download = active[downloadId]
-            if (download == null || !download.owns(task)) {
+            if (download == null || !download.owns(task, session)) {
                 // Paused, replaced, or a transfer cancelled while the app was not running
                 // (a force quit): keep its resume data unless something newer owns the download.
                 if (
@@ -564,27 +676,28 @@ private class BackgroundDownloadsCoordinator : NSObject(), NSURLSessionDownloadD
         }
     }
 
-    private fun finishWithFailure(task: NSURLSessionDownloadTask, message: String) {
+    private fun finishWithFailure(session: NSURLSession, task: NSURLSessionDownloadTask, message: String) {
         val (downloadId, _) = task.downloadIdentity() ?: return
-        val download = active[downloadId]?.takeIf { it.owns(task) } ?: return
+        val download = active[downloadId]?.takeIf { it.owns(task, session) } ?: return
         active.remove(downloadId)
         download.callbacks?.onFailure(message)
         startQueued()
     }
 
     private fun reportProgress(
+        session: NSURLSession,
         task: NSURLSessionDownloadTask,
         downloadedBytes: Long,
         expectedBytes: Long,
         force: Boolean,
     ) {
         val (downloadId, _) = task.downloadIdentity() ?: return
-        val download = active[downloadId]?.takeIf { it.owns(task) } ?: return
+        val download = active[downloadId]?.takeIf { it.owns(task, session) } ?: return
         val callbacks = download.callbacks ?: return
         val totalBytes = expectedBytes.takeIf { it > 0L }
         val now = NSDate().timeIntervalSince1970
         val reachedEnd = totalBytes != null && downloadedBytes >= totalBytes
-        val interval = if (UIApplication.sharedApplication.applicationState == UIApplicationState.UIApplicationStateActive) {
+        val interval = if (isAppActive()) {
             PROGRESS_INTERVAL_FOREGROUND_SECONDS
         } else {
             PROGRESS_INTERVAL_BACKGROUND_SECONDS
@@ -633,6 +746,9 @@ private fun onMain(block: () -> Unit) {
         dispatch_async(dispatch_get_main_queue()) { block() }
     }
 }
+
+private fun isAppActive(): Boolean =
+    UIApplication.sharedApplication.applicationState == UIApplicationState.UIApplicationStateActive
 
 private fun String.toFileUri(): String = NSURL.fileURLWithPath(this).absoluteString ?: "file://$this"
 
