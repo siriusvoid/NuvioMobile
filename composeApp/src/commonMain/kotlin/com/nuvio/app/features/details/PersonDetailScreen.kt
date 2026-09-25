@@ -61,7 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
-import com.nuvio.app.core.i18n.localizedShortMonthName
+import com.nuvio.app.core.i18n.localizedShortDate
 import com.nuvio.app.core.ui.SkeletonPosterRow
 import com.nuvio.app.core.ui.landscapePosterHeightForWidth
 import com.nuvio.app.core.ui.landscapePosterWidth
@@ -1229,7 +1229,7 @@ private fun formatDateForDisplay(date: String): String? {
     val day = parts[2]
     val year = parts[0]
     return if (month in 1..12) {
-        "${localizedShortMonthName(month)} $day, $year"
+        localizedShortDate(year, month, day)
     } else {
         null
     }
