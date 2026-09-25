@@ -33,20 +33,12 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
     val p2pConnecting = p2pStreamingState as? P2pStreamingState.Connecting
     val p2pStats = p2pStreamingState as? P2pStreamingState.Streaming
     val p2pPeerInfo = p2pStats?.let { stats ->
-        org.jetbrains.compose.resources.stringResource(
-            nuvio.composeapp.generated.resources.Res.string.player_torrent_peer_info,
-            stats.seeds,
-            stats.peers,
-        )
+        com.nuvio.app.features.p2p.torrentPeerInfo(seeds = stats.seeds, peers = stats.peers)
     }
     val p2pDownloadSpeed = p2pStats?.let { formatP2pSpeed(it.downloadSpeed) }
     val p2pLoadingBytes = p2pStats?.let { maxOf(it.downloadedBytes, it.deliveredBytes) } ?: 0L
     val connectingPeerInfo = p2pConnecting?.let { state ->
-        org.jetbrains.compose.resources.stringResource(
-            nuvio.composeapp.generated.resources.Res.string.player_torrent_peer_info,
-            state.seeds,
-            state.peers,
-        )
+        com.nuvio.app.features.p2p.torrentPeerInfo(seeds = state.seeds, peers = state.peers)
     }
     val p2pInitialLoadingMessage = when {
         !isP2pPlaybackActive || initialLoadCompleted -> null

@@ -57,6 +57,7 @@ import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioSurfaceCard
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -523,8 +524,8 @@ private fun InstalledAddonCard(
                 },
             )
             manifest?.let {
-                NuvioInfoBadge(text = stringResource(Res.string.addons_badge_resources, it.resources.size))
-                NuvioInfoBadge(text = stringResource(Res.string.addons_badge_catalogs, it.catalogs.size))
+                NuvioInfoBadge(text = pluralStringResource(Res.plurals.addons_badge_resources, it.resources.size, it.resources.size))
+                NuvioInfoBadge(text = pluralStringResource(Res.plurals.addons_badge_catalogs, it.catalogs.size, it.catalogs.size))
                 if (it.behaviorHints.configurable) {
                     NuvioInfoBadge(text = stringResource(Res.string.addons_badge_configurable))
                 }
@@ -622,7 +623,7 @@ private fun manifestSummary(manifest: AddonManifest): String {
         append(resources)
         if (manifest.idPrefixes.isNotEmpty()) {
             append(" • ")
-            append(stringResource(Res.string.addons_summary_id_rules, manifest.idPrefixes.size))
+            append(pluralStringResource(Res.plurals.addons_summary_id_rules, manifest.idPrefixes.size, manifest.idPrefixes.size))
         }
         if (manifest.behaviorHints.p2p) {
             append(" • P2P")

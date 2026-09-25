@@ -113,7 +113,6 @@ import nuvio.composeapp.generated.resources.settings_debrid_description_template
 import nuvio.composeapp.generated.resources.settings_debrid_formatter_reset_subtitle
 import nuvio.composeapp.generated.resources.settings_debrid_formatter_reset_title
 import nuvio.composeapp.generated.resources.settings_debrid_prepare_count_many
-import nuvio.composeapp.generated.resources.settings_debrid_prepare_count_one
 import nuvio.composeapp.generated.resources.settings_debrid_prepare_instant_playback
 import nuvio.composeapp.generated.resources.settings_debrid_prepare_instant_playback_description
 import nuvio.composeapp.generated.resources.settings_debrid_prepare_stream_count
@@ -205,6 +204,7 @@ import nuvio.composeapp.generated.resources.settings_debrid_rule_required_releas
 import nuvio.composeapp.generated.resources.settings_debrid_rule_excluded_release_groups
 import nuvio.composeapp.generated.resources.settings_debrid_rule_excluded_release_groups_desc
 import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.runBlocking
 
@@ -597,11 +597,7 @@ private fun templatePreview(value: String, defaultValue: String): String {
 
 @Composable
 private fun prepareCountLabel(limit: Int): String =
-    if (limit == 1) {
-        stringResource(Res.string.settings_debrid_prepare_count_one)
-    } else {
-        stringResource(Res.string.settings_debrid_prepare_count_many, limit)
-    }
+    pluralStringResource(Res.plurals.settings_debrid_prepare_count_many, limit, limit)
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1139,7 +1135,7 @@ private fun streamMaxResultsLabel(value: Int): String =
     if (value <= 0) {
         stringResource(Res.string.settings_debrid_results_all)
     } else {
-        stringResource(Res.string.settings_debrid_results_count, value)
+        pluralStringResource(Res.plurals.settings_debrid_results_count, value, value)
     }
 
 @Composable

@@ -63,6 +63,7 @@ import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.navigation.LocalUseNativeNavigation
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
@@ -114,11 +115,12 @@ fun CollectionManagementScreen(
         item {
             NuvioSurfaceCard {
                 Text(
-                    text = stringResource(
-                        Res.string.collections_count_summary,
-                        collections.size,
-                        collections.sumOf { it.folders.size },
-                    ),
+                    text = run {
+                        val folderCount = collections.sumOf { it.folders.size }
+                        pluralStringResource(Res.plurals.collections_count, collections.size, collections.size) +
+                            ", " +
+                            pluralStringResource(Res.plurals.collections_folder_count, folderCount, folderCount)
+                    },
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -297,7 +299,7 @@ private fun CollectionListItem(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 val summary = buildString {
-                    append(stringResource(Res.string.collections_folder_count, collection.folders.size))
+                    append(pluralStringResource(Res.plurals.collections_folder_count, collection.folders.size, collection.folders.size))
                     if (collection.pinToTop) {
                         append(" · ")
                         append(stringResource(Res.string.collections_pinned))

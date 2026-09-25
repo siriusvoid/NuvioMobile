@@ -40,6 +40,7 @@ import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.trakt.TraktCommentReview
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -207,7 +208,7 @@ fun CommentDetailSheet(
                         )
                     }
                     Text(
-                        text = stringResource(Res.string.detail_comments_likes, comment.likes),
+                        text = pluralStringResource(Res.plurals.detail_comments_likes, comment.likes, comment.likes),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

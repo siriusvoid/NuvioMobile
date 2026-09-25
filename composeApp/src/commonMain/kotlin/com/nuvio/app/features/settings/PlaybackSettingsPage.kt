@@ -86,7 +86,7 @@ import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
@@ -1706,16 +1706,12 @@ private fun PlaybackSettingsSection(
 }
 
 @Composable
-private fun formatReuseCacheDuration(hours: Int): String = when {
-    hours < 24 && hours == 1 -> stringResource(Res.string.settings_playback_duration_hour_one, hours)
-    hours < 24 -> stringResource(Res.string.settings_playback_duration_hours, hours)
-    hours % 24 == 0 -> {
-        val days = hours / 24
-        if (days == 1) stringResource(Res.string.settings_playback_duration_day_one, days)
-        else stringResource(Res.string.settings_playback_duration_days, days)
+private fun formatReuseCacheDuration(hours: Int): String =
+    if (hours >= 24 && hours % 24 == 0) {
+        pluralStringResource(Res.plurals.settings_playback_duration_days, hours / 24, hours / 24)
+    } else {
+        pluralStringResource(Res.plurals.settings_playback_duration_hours, hours, hours)
     }
-    else -> stringResource(Res.string.settings_playback_duration_hours, hours)
-}
 
 private data class LanguageSelectionOption(
     val value: String?,

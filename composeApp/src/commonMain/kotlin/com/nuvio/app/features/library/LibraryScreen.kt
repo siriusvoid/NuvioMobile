@@ -90,6 +90,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -1046,7 +1047,7 @@ private fun cloudLibrarySubtitle(item: CloudLibraryItem): String {
     val fileLine = when (val playableCount = item.playableFiles.size) {
         0 -> stringResource(Res.string.cloud_library_no_playable_files)
         1 -> item.playableFiles.first().name
-        else -> stringResource(Res.string.cloud_library_playable_file_count, playableCount)
+        else -> pluralStringResource(Res.plurals.cloud_library_playable_file_count, playableCount, playableCount)
     }
     return listOf(item.providerName, cloudLibraryTypeLabel(item.type), fileLine).joinToString(" • ")
 }

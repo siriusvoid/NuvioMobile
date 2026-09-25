@@ -325,7 +325,7 @@ private fun LazyListScope.downloadsRootContent(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Text(
-                            text = stringResource(Res.string.downloads_episode_count, episodes.size),
+                            text = pluralStringResource(Res.plurals.downloads_episode_count, episodes.size, episodes.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

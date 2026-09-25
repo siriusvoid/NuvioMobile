@@ -38,11 +38,21 @@
     <string name="addon_installing">Установка</string>
     <string name="addon_title">Аддоны</string>
     <string name="addons_badge_active">Активен</string>
-    <string name="addons_badge_catalogs">%1$d каталогов</string>
+    <plurals name="addons_badge_catalogs">
+        <item quantity="one">%1$d каталог</item>
+        <item quantity="few">%1$d каталога</item>
+        <item quantity="many">%1$d каталогов</item>
+        <item quantity="other">%1$d каталога</item>
+    </plurals>
     <string name="addons_badge_configurable">Настраивается</string>
     <string name="addons_badge_disabled">Отключён</string>
     <string name="addons_badge_refreshing">Обновление</string>
-    <string name="addons_badge_resources">%1$d ресурсов</string>
+    <plurals name="addons_badge_resources">
+        <item quantity="one">%1$d ресурс</item>
+        <item quantity="few">%1$d ресурса</item>
+        <item quantity="many">%1$d ресурсов</item>
+        <item quantity="other">%1$d ресурса</item>
+    </plurals>
     <string name="addons_badge_unavailable">Недоступен</string>
     <string name="addons_configure">Настроить аддон</string>
     <string name="addons_delete">Удалить аддон</string>
@@ -74,12 +84,22 @@
     <string name="addons_section_add_addon">Добавить аддон</string>
     <string name="addons_section_installed">Установленные аддоны</string>
     <string name="addons_section_overview">Обзор</string>
-    <string name="addons_summary_id_rules">%1$d правил ID</string>
+    <plurals name="addons_summary_id_rules">
+        <item quantity="one">%1$d правило ID</item>
+        <item quantity="few">%1$d правила ID</item>
+        <item quantity="many">%1$d правил ID</item>
+        <item quantity="other">%1$d правила ID</item>
+    </plurals>
     <string name="addons_version_format">Версия %1$s</string>
     <string name="cd_selected">Выбрано</string>
     <string name="collections_copy_json">Скопировать JSON</string>
     <string name="collections_copy_json_error">Данные коллекции слишком велики для буфера обмена на этом устройстве.</string>
-    <string name="collections_count_summary">%1$d коллекций, %2$d папок</string>
+    <plurals name="collections_count">
+        <item quantity="one">%1$d коллекция</item>
+        <item quantity="few">%1$d коллекции</item>
+        <item quantity="many">%1$d коллекций</item>
+        <item quantity="other">%1$d коллекции</item>
+    </plurals>
     <string name="collections_delete_message">Удалить «%1$s»? Это действие нельзя отменить.</string>
     <string name="collections_delete_title">Удалить коллекцию</string>
     <string name="collections_editor_add_catalog">Добавить каталог</string>
@@ -118,9 +138,14 @@
     <string name="collections_editor_select_catalogs_description">Выберите каталоги аддонов, которые объединит эта папка.</string>
     <string name="collections_editor_select_catalogs">Выберите каталоги</string>
     <string name="collections_editor_select_genre">Выберите жанр</string>
-    <string name="collections_editor_selected_count">%1$d выбрано</string>
-    <string name="collections_editor_catalog_count">%1$d каталогов</string>
-    <string name="collections_editor_catalog_selected_count">%1$d выбрано</string>
+    <string name="collections_editor_selected_count">Выбрано %1$d</string>
+    <plurals name="collections_editor_catalog_count">
+        <item quantity="one">%1$d каталог</item>
+        <item quantity="few">%1$d каталога</item>
+        <item quantity="many">%1$d каталогов</item>
+        <item quantity="other">%1$d каталога</item>
+    </plurals>
+    <string name="collections_editor_catalog_selected_count">Выбрано %1$d</string>
     <string name="collections_editor_shape_poster">Постер</string>
     <string name="collections_editor_shape_square">Квадратная</string>
     <string name="collections_editor_shape_wide">Широкая</string>
@@ -128,7 +153,12 @@
     <string name="collections_editor_show_all_tab">Показывать вкладку «Все»</string>
     <string name="collections_editor_show_gif_when_configured_desc">Если GIF задан, показывать его вместо статичной обложки.</string>
     <string name="collections_editor_show_gif_when_configured">Показывать GIF, если задан</string>
-    <string name="collections_editor_source_count">%1$d источников · %2$s</string>
+    <plurals name="collections_editor_source_count">
+        <item quantity="one">%1$d источник · %2$s</item>
+        <item quantity="few">%1$d источника · %2$s</item>
+        <item quantity="many">%1$d источников · %2$s</item>
+        <item quantity="other">%1$d источника · %2$s</item>
+    </plurals>
     <string name="collections_editor_tile_shape">Форма плитки</string>
     <string name="collections_editor_view_mode_rows">Ряды</string>
     <string name="collections_editor_view_mode_tabs">Вкладки</string>
@@ -324,7 +354,12 @@
     <string name="collections_editor_tmdb_subtitle_discover">Подборка TMDB</string>
     <string name="collections_empty_subtitle">Создайте коллекцию, чтобы упорядочить каталоги.</string>
     <string name="collections_empty_title">Коллекций пока нет</string>
-    <string name="collections_folder_count">Папка(и) %1$d</string>
+    <plurals name="collections_folder_count">
+        <item quantity="one">%1$d папка</item>
+        <item quantity="few">%1$d папки</item>
+        <item quantity="many">%1$d папок</item>
+        <item quantity="other">%1$d папки</item>
+    </plurals>
     <string name="collections_folder_empty_items">Ничего не найдено</string>
     <string name="collections_folder_not_found">Папка не найдена</string>
     <string name="collections_header">Коллекции</string>
@@ -616,7 +651,12 @@
     <string name="detail_comments_badge_review">Отзыв</string>
     <string name="detail_comments_badge_spoiler">Спойлер</string>
     <string name="detail_comments_empty">Отзывов в Trakt пока нет.</string>
-    <string name="detail_comments_likes">%1$d нравится</string>
+    <plurals name="detail_comments_likes">
+        <item quantity="one">%1$d лайк</item>
+        <item quantity="few">%1$d лайка</item>
+        <item quantity="many">%1$d лайков</item>
+        <item quantity="other">%1$d лайка</item>
+    </plurals>
     <string name="detail_comments_spoiler_card">Этот комментарий содержит спойлеры.</string>
     <string name="detail_comments_spoiler_hidden_sheet">Комментарий содержит спойлеры и скрыт.</string>
     <string name="detail_comments_title">Комментарии</string>
@@ -625,7 +665,12 @@
     <string name="detail_trailers_title">Трейлеры</string>
     <string name="downloads_empty_episodes">Нет скачанных серий</string>
     <string name="downloads_empty_title">Пока нет загрузок</string>
-    <string name="downloads_episode_count">%1$d скачанные эпизоды</string>
+    <plurals name="downloads_episode_count">
+        <item quantity="one">%1$d скачанная серия</item>
+        <item quantity="few">%1$d скачанные серии</item>
+        <item quantity="many">%1$d скачанных серий</item>
+        <item quantity="other">%1$d скачанные серии</item>
+    </plurals>
     <string name="downloads_open_directory">Открыть папку загрузок</string>
     <string name="downloads_open_directory_failed">Не удалось открыть папку загрузок</string>
     <string name="downloads_delete_show">Удалить все серии</string>
@@ -732,14 +777,25 @@
     <string name="settings_homescreen_section_collections">КОЛЛЕКЦИИ</string>
     <string name="settings_homescreen_section_hero">ГЛАВНЫЙ ЭКРАН</string>
     <string name="settings_homescreen_section_hero_sources">КАТАЛОГИ ГЛАВНОГО БЛОКА</string>
-    <string name="settings_homescreen_selected_count">%1$d из %2$d выбран</string>
+    <string name="settings_homescreen_selected_count">Выбрано %1$d из %2$d</string>
     <string name="settings_homescreen_show_hero">Показывать главный блок</string>
     <string name="settings_homescreen_show_hero_description">Карусель вверху главного экрана.</string>
     <string name="layout_hide_unreleased">Скрывать невышедшее</string>
     <string name="layout_hide_unreleased_sub">Скрывать фильмы и сериалы, которые ещё не вышли.</string>
     <string name="layout_catalog_type">Показывать тип каталога</string>
     <string name="layout_catalog_type_sub">Показывать тип рядом с названием каталога (Фильм/Сериал).</string>
-    <string name="settings_homescreen_summary">Видно %1$d из %2$d каталогов • выбрано %3$d источников витрины</string>
+    <plurals name="settings_homescreen_summary_hero">
+        <item quantity="one">выбран %1$d источник главного блока</item>
+        <item quantity="few">выбрано %1$d источника главного блока</item>
+        <item quantity="many">выбрано %1$d источников главного блока</item>
+        <item quantity="other">выбрано %1$d источника главного блока</item>
+    </plurals>
+    <plurals name="settings_homescreen_summary_catalogs">
+        <item quantity="one">На главной %1$d из %2$d каталога</item>
+        <item quantity="few">На главной %1$d из %2$d каталогов</item>
+        <item quantity="many">На главной %1$d из %2$d каталогов</item>
+        <item quantity="other">На главной %1$d из %2$d каталогов</item>
+    </plurals>
     <string name="settings_homescreen_summary_hint">Открывайте каталог, только если нужно его переименовать или переместить.</string>
     <string name="settings_homescreen_visible">Показан</string>
     <string name="settings_hide_secret">Скрыть значение</string>
@@ -893,8 +949,12 @@
     <string name="settings_debrid_prepare_instant_playback_description">Получать ссылки для воспроизведения до его начала.</string>
     <string name="settings_debrid_prepare_stream_count">Сколько ссылок готовить</string>
     <string name="settings_debrid_prepare_stream_count_warning">По возможности выбирайте меньше. Подключённые сервисы могут ограничивать число ссылок за период. Открытие фильма или серии тоже может учитываться в этом лимите, даже если вы не нажали «Смотреть», потому что ссылки готовятся заранее.</string>
-    <string name="settings_debrid_prepare_count_one">1 ссылка</string>
-    <string name="settings_debrid_prepare_count_many">%1$d ссылок</string>
+    <plurals name="settings_debrid_prepare_count_many">
+        <item quantity="one">%1$d ссылка</item>
+        <item quantity="few">%1$d ссылки</item>
+        <item quantity="many">%1$d ссылок</item>
+        <item quantity="other">%1$d ссылки</item>
+    </plurals>
     <string name="settings_debrid_section_formatting">ФОРМАТИРОВАНИЕ</string>
     <string name="settings_debrid_name_template">Шаблон названия</string>
     <string name="settings_debrid_name_template_description">Определяет, как выглядят названия результатов. Оставьте пустым, чтобы использовать исходное название.</string>
@@ -923,16 +983,37 @@
     <string name="settings_stream_badge_enter_url">Введите JSON URL значков.</string>
     <string name="settings_stream_badge_url_scheme_invalid">URL значков должен начинаться с http:// или https://.</string>
     <string name="settings_stream_badge_import_limit">Можно импортировать не больше %1$d URL значков.</string>
-    <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d активные значки Fusion</string>
+    <plurals name="settings_fusion_badges_summary">
+        <item quantity="one">%1$d/%2$d URL, %3$d активный значок Fusion</item>
+        <item quantity="few">%1$d/%2$d URL, %3$d активных значка Fusion</item>
+        <item quantity="many">%1$d/%2$d URL, %3$d активных значков Fusion</item>
+        <item quantity="other">%1$d/%2$d URL, %3$d активных значка Fusion</item>
+    </plurals>
     <string name="settings_fusion_badges_empty">URL значков Fusion не импортированы.</string>
     <string name="settings_fusion_badge_url_label">JSON URL значков Fusion</string>
-    <string name="settings_fusion_badge_urls_imported">%1$d/%2$d Fusion URL импортированы</string>
+    <string name="settings_fusion_badge_urls_imported">Импортировано %1$d из %2$d URL Fusion</string>
     <string name="settings_fusion_badge_url_active">Активен</string>
     <string name="settings_fusion_badge_url_inactive">Неактивен</string>
-    <string name="settings_fusion_badge_url_status_summary">%1$s, значки с поддержкой %2$d, группы %3$d</string>
+    <plurals name="settings_fusion_badge_group_count">
+        <item quantity="one">%1$d группа</item>
+        <item quantity="few">%1$d группы</item>
+        <item quantity="many">%1$d групп</item>
+        <item quantity="other">%1$d группы</item>
+    </plurals>
+    <plurals name="settings_fusion_badge_enabled_count">
+        <item quantity="one">%1$d включённый значок</item>
+        <item quantity="few">%1$d включённых значка</item>
+        <item quantity="many">%1$d включённых значков</item>
+        <item quantity="other">%1$d включённых значка</item>
+    </plurals>
     <string name="settings_fusion_badge_preview_action">Предпросмотр</string>
     <string name="settings_fusion_badge_preview_title">Предпросмотр значков Fusion</string>
-    <string name="settings_fusion_badge_preview_count">%1$d Значки в стиле Fusion из этого URL</string>
+    <plurals name="settings_fusion_badge_preview_count">
+        <item quantity="one">%1$d значок в стиле Fusion по этому URL</item>
+        <item quantity="few">%1$d значка в стиле Fusion по этому URL</item>
+        <item quantity="many">%1$d значков в стиле Fusion по этому URL</item>
+        <item quantity="other">%1$d значка в стиле Fusion по этому URL</item>
+    </plurals>
     <string name="settings_fusion_badge_preview_empty">По этому URL нет изображений значков в стиле Fusion.</string>
     <string name="settings_fusion_badge_group_title">Группа %1$d</string>
     <string name="settings_fusion_badge_other_group_title">Другие значки Fusion</string>
@@ -1000,7 +1081,12 @@
     <string name="settings_notifications_episode_release_alerts">Уведомления о новых сериях</string>
     <string name="settings_notifications_episode_release_alerts_description">Присылать локальное уведомление, когда выходит новая серия сохранённого сериала.</string>
     <string name="settings_notifications_permission_disabled">Системные уведомления для Nuvio отключены. Включите их, чтобы получать оповещения и тестовые уведомления.</string>
-    <string name="settings_notifications_scheduled_count">На этом устройстве в настоящее время запланированы оповещения о выпуске %1$d.</string>
+    <plurals name="settings_notifications_scheduled_count">
+        <item quantity="one">На этом устройстве запланировано %1$d уведомление о новой серии.</item>
+        <item quantity="few">На этом устройстве запланировано %1$d уведомления о новых сериях.</item>
+        <item quantity="many">На этом устройстве запланировано %1$d уведомлений о новых сериях.</item>
+        <item quantity="other">На этом устройстве запланировано %1$d уведомления о новых сериях.</item>
+    </plurals>
     <string name="settings_notifications_section_alerts">ОПОВЕЩЕНИЯ</string>
     <string name="settings_notifications_section_test">ТЕСТ</string>
     <string name="settings_notifications_send_test">Отправить тестовое уведомление</string>
@@ -1080,10 +1166,18 @@
     <string name="settings_playback_decoder_priority">Приоритет декодеров</string>
     <string name="settings_playback_dialog_close">Нажмите за пределами окна, чтобы закрыть</string>
     <string name="settings_playback_dialog_save_close">Нажмите за пределами окна, чтобы сохранить и закрыть</string>
-    <string name="settings_playback_duration_day_one">%1$d день</string>
-    <string name="settings_playback_duration_days">%1$d дней</string>
-    <string name="settings_playback_duration_hour_one">%1$d час</string>
-    <string name="settings_playback_duration_hours">%1$d часов</string>
+    <plurals name="settings_playback_duration_days">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
+    <plurals name="settings_playback_duration_hours">
+        <item quantity="one">%1$d час</item>
+        <item quantity="few">%1$d часа</item>
+        <item quantity="many">%1$d часов</item>
+        <item quantity="other">%1$d часа</item>
+    </plurals>
     <string name="settings_playback_enable_libass">libass для субтитров ASS/SSA</string>
     <string name="settings_playback_enable_libass_description">Экспериментально: полноценный вывод ASS/SSA (стили, позиционирование, анимация)</string>
     <string name="settings_playback_external_player">Внешний плеер</string>
@@ -1177,7 +1271,7 @@
     <string name="settings_playback_section_stream_selection">ВЫБОР ПОТОКА</string>
     <string name="settings_playback_section_subtitle_audio">СУБТИТРЫ И АУДИО</string>
     <string name="settings_playback_section_subtitle_rendering">ВЫВОД СУБТИТРОВ</string>
-    <string name="settings_playback_selected_count">%1$d выбрано</string>
+    <string name="settings_playback_selected_count">Выбрано %1$d</string>
     <string name="settings_playback_show_loading_overlay">Экран загрузки</string>
     <string name="settings_playback_show_loading_overlay_description">Показывать экран загрузки до появления первого видеокадра.</string>
     <string name="settings_playback_pause_overlay">Экран паузы</string>
@@ -1383,7 +1477,12 @@
     <string name="trakt_cw_window_title">Период для «Продолжить просмотр»</string>
     <string name="trakt_cw_window_subtitle">За какой период активность Trakt показывать в «Продолжить просмотр».</string>
     <string name="trakt_all_history">Вся история</string>
-    <string name="trakt_days_format">%1$d дней</string>
+    <plurals name="trakt_days_format">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
     <string name="source_audience_score">Оценка зрителей</string>
     <string name="source_imdb">IMDb</string>
     <string name="source_letterboxd">Letterboxd</string>
@@ -1682,7 +1781,12 @@
     <string name="playback_show_loading_status_sub">Показывать этапы подготовки плеера.</string>
     <string name="player_loading_preparing">Подготовка потока…</string>
     <string name="player_loading_subtitles">Загрузка субтитров…</string>
-    <string name="player_loading_subtitles_from">Загрузка субтитров из аддонов (%1$d)…</string>
+    <plurals name="player_loading_subtitles_from">
+        <item quantity="one">Загрузка субтитров из %1$d аддона…</item>
+        <item quantity="few">Загрузка субтитров из %1$d аддонов…</item>
+        <item quantity="many">Загрузка субтитров из %1$d аддонов…</item>
+        <item quantity="other">Загрузка субтитров из %1$d аддонов…</item>
+    </plurals>
     <string name="player_loading_subtitles_progress">Загрузка субтитров… (%1$d / %2$d)</string>
     <string name="player_loading_subtitles_addon">Субтитры: %1$s (%2$d / %3$d)</string>
     <string name="player_loading_building">Настройка плеера…</string>
@@ -1966,7 +2070,12 @@
     <string name="cloud_library_play_file">Воспроизвести файл</string>
     <string name="cloud_library_play_not_connected">Облачный сервис не подключён.</string>
     <string name="cloud_library_play_provider_not_connected">%1$s не подключён.</string>
-    <string name="cloud_library_playable_file_count">Воспроизводимые файлы %1$d</string>
+    <plurals name="cloud_library_playable_file_count">
+        <item quantity="one">%1$d файл для воспроизведения</item>
+        <item quantity="few">%1$d файла для воспроизведения</item>
+        <item quantity="many">%1$d файлов для воспроизведения</item>
+        <item quantity="other">%1$d файла для воспроизведения</item>
+    </plurals>
     <string name="cloud_library_provider_all">Все</string>
     <string name="cloud_library_refresh">Обновить облачную библиотеку</string>
     <string name="cloud_library_search_label">Поиск по облачной библиотеке</string>
@@ -2077,10 +2186,15 @@
     <string name="settings_debrid_sort_language">Сначала по языку</string>
     <!-- Debrid selection labels -->
     <string name="settings_debrid_selection_any">Любой</string>
-    <string name="settings_debrid_selection_count">%1$d выбрано</string>
+    <string name="settings_debrid_selection_count">Выбрано %1$d</string>
     <!-- Debrid result count labels -->
     <string name="settings_debrid_results_all">Все результаты</string>
-    <string name="settings_debrid_results_count">%1$d результаты</string>
+    <plurals name="settings_debrid_results_count">
+        <item quantity="one">%1$d результат</item>
+        <item quantity="few">%1$d результата</item>
+        <item quantity="many">%1$d результатов</item>
+        <item quantity="other">%1$d результата</item>
+    </plurals>
     <!-- Debrid size range labels -->
     <string name="settings_debrid_size_up_to">До %1$d ГБ</string>
     <string name="settings_debrid_size_min">От %1$d ГБ</string>
@@ -2199,8 +2313,18 @@
     <string name="collections_trakt_credentials_missing">Нет учётных данных Trakt.</string>
     <string name="collections_trakt_error_with_code">%1$s (%2$d)</string>
     <string name="collections_trakt_invalid_list_id_or_url">Введите корректный ID или URL списка Trakt</string>
-    <string name="collections_trakt_list_items_count">%1$d элементы</string>
-    <string name="collections_trakt_list_likes_count">%1$d нравится</string>
+    <plurals name="collections_trakt_list_items_count">
+        <item quantity="one">%1$d элемент</item>
+        <item quantity="few">%1$d элемента</item>
+        <item quantity="many">%1$d элементов</item>
+        <item quantity="other">%1$d элемента</item>
+    </plurals>
+    <plurals name="collections_trakt_list_likes_count">
+        <item quantity="one">%1$d лайк</item>
+        <item quantity="few">%1$d лайка</item>
+        <item quantity="many">%1$d лайков</item>
+        <item quantity="other">%1$d лайка</item>
+    </plurals>
     <string name="collections_trakt_list_not_found_or_private">Список Trakt не найден или не публичный</string>
     <string name="collections_trakt_missing_list_id">Не указан ID списка Trakt</string>
     <string name="collections_trakt_missing_numeric_id">У списка Trakt нет числового ID</string>
@@ -2256,9 +2380,19 @@
     <string name="player_error_unable_to_play_stream">Не удалось воспроизвести этот поток.</string>
     <string name="plugins_badge_disabled">Плагины отключены</string>
     <string name="plugins_badge_enabled">Плагины включены</string>
-    <string name="plugins_badge_providers">%1$d провайдеров</string>
+    <plurals name="plugins_badge_providers">
+        <item quantity="one">%1$d провайдер</item>
+        <item quantity="few">%1$d провайдера</item>
+        <item quantity="many">%1$d провайдеров</item>
+        <item quantity="other">%1$d провайдера</item>
+    </plurals>
     <string name="plugins_badge_refreshing">Обновление</string>
-    <string name="plugins_badge_repos">%1$d репозиториев</string>
+    <plurals name="plugins_badge_repos">
+        <item quantity="one">%1$d репозиторий</item>
+        <item quantity="few">%1$d репозитория</item>
+        <item quantity="many">%1$d репозиториев</item>
+        <item quantity="other">%1$d репозитория</item>
+    </plurals>
     <string name="plugins_button_install_repo">Установить репозиторий плагинов</string>
     <string name="plugins_button_installing">Установка…</string>
     <string name="plugins_button_test_provider">Проверить провайдера</string>
@@ -2381,10 +2515,20 @@
     <string name="settings_p2p_clear_cache_playback_active">Остановите P2P-воспроизведение, прежде чем очищать кэш</string>
     <string name="settings_p2p_clear_cache_done">Удалено %1$s неактивных данных торрентов</string>
     <string name="settings_p2p_clear_cache_failed">Не удалось очистить кэш торрентов</string>
-    <string name="player_torrent_peer_info">%1$d сидов · %2$d пиров</string>
+    <plurals name="player_torrent_peers">
+        <item quantity="one">%1$d пир</item>
+        <item quantity="few">%1$d пира</item>
+        <item quantity="many">%1$d пиров</item>
+        <item quantity="other">%1$d пира</item>
+    </plurals>
+    <plurals name="player_torrent_seeds">
+        <item quantity="one">%1$d сид</item>
+        <item quantity="few">%1$d сида</item>
+        <item quantity="many">%1$d сидов</item>
+        <item quantity="other">%1$d сида</item>
+    </plurals>
     <string name="player_torrent_buffered_status">Буфер %1$s · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d пиров · %2$d сидов · %3$d%%</string>
     <string name="player_torrent_connecting_peers">Подключение к пирам…</string>
     <string name="player_torrent_starting_engine">Запуск движка P2P…</string>
     <string name="player_torrent_fetching_metadata">Получение метаданных торрента…</string>

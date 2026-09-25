@@ -65,6 +65,8 @@ import nuvio.composeapp.generated.resources.action_cancel
 import nuvio.composeapp.generated.resources.action_close
 import nuvio.composeapp.generated.resources.action_delete
 import nuvio.composeapp.generated.resources.action_import
+import nuvio.composeapp.generated.resources.settings_fusion_badge_enabled_count
+import nuvio.composeapp.generated.resources.settings_fusion_badge_group_count
 import nuvio.composeapp.generated.resources.settings_fusion_badge_group_title
 import nuvio.composeapp.generated.resources.settings_fusion_badge_other_group_title
 import nuvio.composeapp.generated.resources.settings_fusion_badge_preview_action
@@ -74,7 +76,6 @@ import nuvio.composeapp.generated.resources.settings_fusion_badge_preview_title
 import nuvio.composeapp.generated.resources.settings_fusion_badge_url_active
 import nuvio.composeapp.generated.resources.settings_fusion_badge_url_inactive
 import nuvio.composeapp.generated.resources.settings_fusion_badge_url_label
-import nuvio.composeapp.generated.resources.settings_fusion_badge_url_status_summary
 import nuvio.composeapp.generated.resources.settings_fusion_badge_urls_imported
 import nuvio.composeapp.generated.resources.settings_fusion_badges_empty
 import nuvio.composeapp.generated.resources.settings_fusion_badges_summary
@@ -96,6 +97,7 @@ import nuvio.composeapp.generated.resources.settings_stream_background_title
 import nuvio.composeapp.generated.resources.settings_stream_background_description
 import nuvio.composeapp.generated.resources.settings_meta_background_mode_cinematic
 import nuvio.composeapp.generated.resources.settings_meta_background_mode_normal
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 internal fun LazyListScope.streamsSettingsContent(isTablet: Boolean) {
@@ -260,8 +262,9 @@ private fun StreamBackgroundModeDialog(
 private fun badgeRulesPreview(rules: StreamBadgeRules): String {
     val normalizedRules = rules.normalized()
     return if (normalizedRules.hasImport) {
-        stringResource(
-            Res.string.settings_fusion_badges_summary,
+        pluralStringResource(
+            Res.plurals.settings_fusion_badges_summary,
+            normalizedRules.enabledFilterCount,
             normalizedRules.imports.size,
             STREAM_BADGE_IMPORT_LIMIT,
             normalizedRules.enabledFilterCount,
@@ -513,12 +516,15 @@ private fun BadgeUrlRow(
                     stringResource(Res.string.settings_fusion_badge_url_inactive)
                 }
                 Text(
-                    text = stringResource(
-                        Res.string.settings_fusion_badge_url_status_summary,
+                    text = listOf(
                         status,
-                        import.enabledFilterCount,
-                        import.groups.size,
-                    ),
+                        pluralStringResource(
+                            Res.plurals.settings_fusion_badge_enabled_count,
+                            import.enabledFilterCount,
+                            import.enabledFilterCount,
+                        ),
+                        pluralStringResource(Res.plurals.settings_fusion_badge_group_count, import.groups.size, import.groups.size),
+                    ).joinToString(", "),
                     style = MaterialTheme.typography.bodySmall,
                     color = tokens.colors.textMuted,
                     modifier = Modifier.weight(1f),
@@ -571,7 +577,7 @@ private fun BadgePreviewDialog(
             overflow = TextOverflow.Ellipsis,
         )
         Text(
-            text = stringResource(Res.string.settings_fusion_badge_preview_count, badgeCount),
+            text = pluralStringResource(Res.plurals.settings_fusion_badge_preview_count, badgeCount, badgeCount),
             style = MaterialTheme.typography.bodySmall,
             color = tokens.colors.textMuted,
         )

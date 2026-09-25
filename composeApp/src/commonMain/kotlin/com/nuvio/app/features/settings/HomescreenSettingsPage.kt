@@ -63,8 +63,10 @@ import nuvio.composeapp.generated.resources.settings_homescreen_section_hero_sou
 import nuvio.composeapp.generated.resources.settings_homescreen_selected_count
 import nuvio.composeapp.generated.resources.settings_homescreen_show_hero
 import nuvio.composeapp.generated.resources.settings_homescreen_show_hero_description
-import nuvio.composeapp.generated.resources.settings_homescreen_summary
+import nuvio.composeapp.generated.resources.settings_homescreen_summary_catalogs
+import nuvio.composeapp.generated.resources.settings_homescreen_summary_hero
 import nuvio.composeapp.generated.resources.settings_homescreen_summary_hint
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 import sh.calvin.reorderable.ReorderableCollectionItemScope
 import sh.calvin.reorderable.ReorderableItem
@@ -294,10 +296,14 @@ private fun HomescreenSummaryCard(
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = stringResource(
-                    Res.string.settings_homescreen_summary,
+                text = pluralStringResource(
+                    Res.plurals.settings_homescreen_summary_catalogs,
+                    totalCatalogCount,
                     enabledCatalogCount,
                     totalCatalogCount,
+                ) + " • " + pluralStringResource(
+                    Res.plurals.settings_homescreen_summary_hero,
+                    selectedHeroSourceCount,
                     selectedHeroSourceCount,
                 ),
                 style = MaterialTheme.typography.bodyMedium,

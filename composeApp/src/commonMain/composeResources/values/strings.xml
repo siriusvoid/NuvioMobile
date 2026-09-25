@@ -38,11 +38,17 @@
     <string name="addon_installing">Installing</string>
     <string name="addon_title">Addons</string>
     <string name="addons_badge_active">Active</string>
-    <string name="addons_badge_catalogs">%1$d catalogs</string>
+    <plurals name="addons_badge_catalogs">
+        <item quantity="one">%1$d catalog</item>
+        <item quantity="other">%1$d catalogs</item>
+    </plurals>
     <string name="addons_badge_configurable">Configurable</string>
     <string name="addons_badge_disabled">Disabled</string>
     <string name="addons_badge_refreshing">Refreshing</string>
-    <string name="addons_badge_resources">%1$d resources</string>
+    <plurals name="addons_badge_resources">
+        <item quantity="one">%1$d resource</item>
+        <item quantity="other">%1$d resources</item>
+    </plurals>
     <string name="addons_badge_unavailable">Unavailable</string>
     <string name="addons_configure">Configure addon</string>
     <string name="addons_delete">Delete addon</string>
@@ -74,12 +80,18 @@
     <string name="addons_section_add_addon">Add Addon</string>
     <string name="addons_section_installed">Installed Addons</string>
     <string name="addons_section_overview">Overview</string>
-    <string name="addons_summary_id_rules">%1$d id rules</string>
+    <plurals name="addons_summary_id_rules">
+        <item quantity="one">%1$d id rule</item>
+        <item quantity="other">%1$d id rules</item>
+    </plurals>
     <string name="addons_version_format">Version %1$s</string>
     <string name="cd_selected">Selected</string>
     <string name="collections_copy_json">Copy JSON</string>
     <string name="collections_copy_json_error">The collection data is too large for the clipboard on this device.</string>
-    <string name="collections_count_summary">%1$d collection(s), %2$d folder(s)</string>
+    <plurals name="collections_count">
+        <item quantity="one">%1$d collection</item>
+        <item quantity="other">%1$d collections</item>
+    </plurals>
     <string name="collections_delete_message">Delete "%1$s"? This cannot be undone.</string>
     <string name="collections_delete_title">Delete Collection</string>
     <string name="collections_editor_add_catalog">Add Catalog</string>
@@ -119,7 +131,10 @@
     <string name="collections_editor_select_catalogs">Select Catalogs</string>
     <string name="collections_editor_select_genre">Select genre</string>
     <string name="collections_editor_selected_count">%1$d selected</string>
-    <string name="collections_editor_catalog_count">%1$d catalogs</string>
+    <plurals name="collections_editor_catalog_count">
+        <item quantity="one">%1$d catalog</item>
+        <item quantity="other">%1$d catalogs</item>
+    </plurals>
     <string name="collections_editor_catalog_selected_count">%1$d selected</string>
     <string name="collections_editor_shape_poster">Poster</string>
     <string name="collections_editor_shape_square">Square</string>
@@ -128,7 +143,10 @@
     <string name="collections_editor_show_all_tab">Show &quot;All&quot; Tab</string>
     <string name="collections_editor_show_gif_when_configured_desc">Play the configured GIF instead of the static cover when available.</string>
     <string name="collections_editor_show_gif_when_configured">Show GIF When Configured</string>
-    <string name="collections_editor_source_count">%1$d source(s) · %2$s</string>
+    <plurals name="collections_editor_source_count">
+        <item quantity="one">%1$d source · %2$s</item>
+        <item quantity="other">%1$d sources · %2$s</item>
+    </plurals>
     <string name="collections_editor_tile_shape">Tile Shape</string>
     <string name="collections_editor_view_mode_rows">Rows</string>
     <string name="collections_editor_view_mode_tabs">Tabs</string>
@@ -324,7 +342,10 @@
     <string name="collections_editor_tmdb_subtitle_discover">TMDB Discover</string>
     <string name="collections_empty_subtitle">Create one to organize your catalogs.</string>
     <string name="collections_empty_title">No collections yet</string>
-    <string name="collections_folder_count">%1$d folder(s)</string>
+    <plurals name="collections_folder_count">
+        <item quantity="one">%1$d folder</item>
+        <item quantity="other">%1$d folders</item>
+    </plurals>
     <string name="collections_folder_empty_items">No items found</string>
     <string name="collections_folder_not_found">Folder not found</string>
     <string name="collections_header">Collections</string>
@@ -616,7 +637,10 @@
     <string name="detail_comments_badge_review">Review</string>
     <string name="detail_comments_badge_spoiler">Spoiler</string>
     <string name="detail_comments_empty">No Trakt reviews available yet.</string>
-    <string name="detail_comments_likes">%1$d likes</string>
+    <plurals name="detail_comments_likes">
+        <item quantity="one">%1$d like</item>
+        <item quantity="other">%1$d likes</item>
+    </plurals>
     <string name="detail_comments_spoiler_card">This comment contains spoilers.</string>
     <string name="detail_comments_spoiler_hidden_sheet">This comment contains spoilers and has been hidden.</string>
     <string name="detail_comments_title">Comments</string>
@@ -625,7 +649,10 @@
     <string name="detail_trailers_title">Trailers</string>
     <string name="downloads_empty_episodes">No completed episodes</string>
     <string name="downloads_empty_title">No downloads yet</string>
-    <string name="downloads_episode_count">%1$d downloaded episode(s)</string>
+    <plurals name="downloads_episode_count">
+        <item quantity="one">%1$d downloaded episode</item>
+        <item quantity="other">%1$d downloaded episodes</item>
+    </plurals>
     <string name="downloads_open_directory">Open downloads folder</string>
     <string name="downloads_open_directory_failed">Couldn&apos;t open downloads folder</string>
     <string name="downloads_delete_show">Delete all episodes</string>
@@ -739,7 +766,14 @@
     <string name="layout_hide_unreleased_sub">Hide movies and shows that haven't been released yet.</string>
     <string name="layout_catalog_type">Show Catalog Type</string>
     <string name="layout_catalog_type_sub">Show type suffix next to catalog name (Movie/Series).</string>
-    <string name="settings_homescreen_summary">%1$d of %2$d catalogs visible • %3$d hero sources selected</string>
+    <plurals name="settings_homescreen_summary_hero">
+        <item quantity="one">%1$d hero source selected</item>
+        <item quantity="other">%1$d hero sources selected</item>
+    </plurals>
+    <plurals name="settings_homescreen_summary_catalogs">
+        <item quantity="one">%1$d of %2$d catalog visible</item>
+        <item quantity="other">%1$d of %2$d catalogs visible</item>
+    </plurals>
     <string name="settings_homescreen_summary_hint">Open a catalog only when you need to rename or reorder it.</string>
     <string name="settings_homescreen_visible">Visible</string>
     <string name="settings_hide_secret">Hide value</string>
@@ -896,8 +930,10 @@
     <string name="settings_debrid_prepare_instant_playback_description">Resolve playable links before playback starts.</string>
     <string name="settings_debrid_prepare_stream_count">Links to prepare</string>
     <string name="settings_debrid_prepare_stream_count_warning">Use a lower count when possible. Connected services may rate-limit how many links can be resolved in a time period. Opening a movie or episode can count toward those limits even if you do not press Watch, because the links are prepared ahead of time.</string>
-    <string name="settings_debrid_prepare_count_one">1 link</string>
-    <string name="settings_debrid_prepare_count_many">%1$d links</string>
+    <plurals name="settings_debrid_prepare_count_many">
+        <item quantity="one">%1$d link</item>
+        <item quantity="other">%1$d links</item>
+    </plurals>
     <string name="settings_debrid_section_formatting">FORMATTING</string>
     <string name="settings_debrid_name_template">Name template</string>
     <string name="settings_debrid_name_template_description">Controls how result names appear. Leave blank to use the original result name.</string>
@@ -926,16 +962,29 @@
     <string name="settings_stream_badge_enter_url">Enter a badge JSON URL.</string>
     <string name="settings_stream_badge_url_scheme_invalid">Badge URL must start with http:// or https://.</string>
     <string name="settings_stream_badge_import_limit">You can import up to %1$d badge URLs.</string>
-    <string name="settings_fusion_badges_summary">%1$d/%2$d URLs, %3$d active Fusion badges</string>
+    <plurals name="settings_fusion_badges_summary">
+        <item quantity="one">%1$d/%2$d URLs, %3$d active Fusion badge</item>
+        <item quantity="other">%1$d/%2$d URLs, %3$d active Fusion badges</item>
+    </plurals>
     <string name="settings_fusion_badges_empty">No Fusion badge URLs imported.</string>
     <string name="settings_fusion_badge_url_label">Fusion badge JSON URL</string>
     <string name="settings_fusion_badge_urls_imported">%1$d/%2$d Fusion URLs imported</string>
     <string name="settings_fusion_badge_url_active">Active</string>
     <string name="settings_fusion_badge_url_inactive">Inactive</string>
-    <string name="settings_fusion_badge_url_status_summary">%1$s, %2$d enabled badges, %3$d groups</string>
+    <plurals name="settings_fusion_badge_group_count">
+        <item quantity="one">%1$d group</item>
+        <item quantity="other">%1$d groups</item>
+    </plurals>
+    <plurals name="settings_fusion_badge_enabled_count">
+        <item quantity="one">%1$d enabled badge</item>
+        <item quantity="other">%1$d enabled badges</item>
+    </plurals>
     <string name="settings_fusion_badge_preview_action">Preview</string>
     <string name="settings_fusion_badge_preview_title">Fusion badge preview</string>
-    <string name="settings_fusion_badge_preview_count">%1$d Fusion-style badges from this URL</string>
+    <plurals name="settings_fusion_badge_preview_count">
+        <item quantity="one">%1$d Fusion-style badge from this URL</item>
+        <item quantity="other">%1$d Fusion-style badges from this URL</item>
+    </plurals>
     <string name="settings_fusion_badge_preview_empty">No Fusion-style badge images in this URL.</string>
     <string name="settings_fusion_badge_group_title">Group %1$d</string>
     <string name="settings_fusion_badge_other_group_title">Other Fusion badges</string>
@@ -1003,7 +1052,10 @@
     <string name="settings_notifications_episode_release_alerts">Episode release alerts</string>
     <string name="settings_notifications_episode_release_alerts_description">Schedule local notifications when a new episode for a saved show becomes available.</string>
     <string name="settings_notifications_permission_disabled">System notifications are disabled for Nuvio. Enable them to receive alerts and test notifications.</string>
-    <string name="settings_notifications_scheduled_count">%1$d release alerts are currently scheduled on this device.</string>
+    <plurals name="settings_notifications_scheduled_count">
+        <item quantity="one">%1$d release alert is currently scheduled on this device.</item>
+        <item quantity="other">%1$d release alerts are currently scheduled on this device.</item>
+    </plurals>
     <string name="settings_notifications_section_alerts">ALERTS</string>
     <string name="settings_notifications_section_test">TEST</string>
     <string name="settings_notifications_send_test">Send Test Notification</string>
@@ -1083,10 +1135,14 @@
     <string name="settings_playback_decoder_priority">Decoder Priority</string>
     <string name="settings_playback_dialog_close">Tap outside to close</string>
     <string name="settings_playback_dialog_save_close">Tap outside to save &amp; close</string>
-    <string name="settings_playback_duration_day_one">%1$d day</string>
-    <string name="settings_playback_duration_days">%1$d days</string>
-    <string name="settings_playback_duration_hour_one">%1$d hour</string>
-    <string name="settings_playback_duration_hours">%1$d hours</string>
+    <plurals name="settings_playback_duration_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="settings_playback_duration_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
     <string name="settings_playback_enable_libass">Use libass for ASS/SSA subtitles</string>
     <string name="settings_playback_enable_libass_description">Experimental: advanced ASS/SSA rendering (styles, positioning, animations)</string>
     <string name="settings_playback_external_player">External Player</string>
@@ -1388,7 +1444,10 @@
     <string name="trakt_cw_window_title">Continue Watching Window</string>
     <string name="trakt_cw_window_subtitle">Choose how much Trakt activity should appear in continue watching.</string>
     <string name="trakt_all_history">All history</string>
-    <string name="trakt_days_format">%1$d days</string>
+    <plurals name="trakt_days_format">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
     <string name="source_audience_score">Audience Score</string>
     <string name="source_imdb">IMDb</string>
     <string name="source_letterboxd">Letterboxd</string>
@@ -1691,7 +1750,10 @@
     <string name="playback_show_loading_status_sub">Display step-by-step progress while the player is initializing.</string>
     <string name="player_loading_preparing">Preparing stream…</string>
     <string name="player_loading_subtitles">Fetching subtitles…</string>
-    <string name="player_loading_subtitles_from">Fetching subtitles from %1$d addons…</string>
+    <plurals name="player_loading_subtitles_from">
+        <item quantity="one">Fetching subtitles from %1$d addon…</item>
+        <item quantity="other">Fetching subtitles from %1$d addons…</item>
+    </plurals>
     <string name="player_loading_subtitles_progress">Fetching subtitles… (%1$d / %2$d)</string>
     <string name="player_loading_subtitles_addon">Subtitles: %1$s (%2$d / %3$d)</string>
     <string name="player_loading_building">Building player…</string>
@@ -1975,7 +2037,10 @@
     <string name="cloud_library_play_file">Play file</string>
     <string name="cloud_library_play_not_connected">Cloud service is not connected.</string>
     <string name="cloud_library_play_provider_not_connected">%1$s is not connected.</string>
-    <string name="cloud_library_playable_file_count">%1$d playable files</string>
+    <plurals name="cloud_library_playable_file_count">
+        <item quantity="one">%1$d playable file</item>
+        <item quantity="other">%1$d playable files</item>
+    </plurals>
     <string name="cloud_library_provider_all">All</string>
     <string name="cloud_library_refresh">Refresh cloud library</string>
     <string name="cloud_library_search_label">Search cloud library</string>
@@ -2089,7 +2154,10 @@
     <string name="settings_debrid_selection_count">%1$d selected</string>
     <!-- Debrid result count labels -->
     <string name="settings_debrid_results_all">All results</string>
-    <string name="settings_debrid_results_count">%1$d results</string>
+    <plurals name="settings_debrid_results_count">
+        <item quantity="one">%1$d result</item>
+        <item quantity="other">%1$d results</item>
+    </plurals>
     <!-- Debrid size range labels -->
     <string name="settings_debrid_size_up_to">Up to %1$dGB</string>
     <string name="settings_debrid_size_min">%1$dGB+</string>
@@ -2208,8 +2276,14 @@
     <string name="collections_trakt_credentials_missing">Missing Trakt credentials.</string>
     <string name="collections_trakt_error_with_code">%1$s (%2$d)</string>
     <string name="collections_trakt_invalid_list_id_or_url">Enter a valid Trakt list ID or URL</string>
-    <string name="collections_trakt_list_items_count">%1$d items</string>
-    <string name="collections_trakt_list_likes_count">%1$d likes</string>
+    <plurals name="collections_trakt_list_items_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <plurals name="collections_trakt_list_likes_count">
+        <item quantity="one">%1$d like</item>
+        <item quantity="other">%1$d likes</item>
+    </plurals>
     <string name="collections_trakt_list_not_found_or_private">Trakt list not found or not public</string>
     <string name="collections_trakt_missing_list_id">Missing Trakt list ID</string>
     <string name="collections_trakt_missing_numeric_id">Trakt list did not include a numeric ID</string>
@@ -2261,9 +2335,15 @@
     <string name="player_error_unable_to_play_stream">Unable to play this stream.</string>
     <string name="plugins_badge_disabled">Plugins disabled</string>
     <string name="plugins_badge_enabled">Plugins enabled</string>
-    <string name="plugins_badge_providers">%1$d providers</string>
+    <plurals name="plugins_badge_providers">
+        <item quantity="one">%1$d provider</item>
+        <item quantity="other">%1$d providers</item>
+    </plurals>
     <string name="plugins_badge_refreshing">Refreshing</string>
-    <string name="plugins_badge_repos">%1$d repos</string>
+    <plurals name="plugins_badge_repos">
+        <item quantity="one">%1$d repo</item>
+        <item quantity="other">%1$d repos</item>
+    </plurals>
     <string name="plugins_button_install_repo">Install Plugin Repository</string>
     <string name="plugins_button_installing">Installing…</string>
     <string name="plugins_button_test_provider">Test Provider</string>
@@ -2382,10 +2462,16 @@
     <string name="settings_p2p_clear_cache_playback_active">Stop P2P playback before clearing the cache</string>
     <string name="settings_p2p_clear_cache_done">Cleared %1$s of inactive torrent data</string>
     <string name="settings_p2p_clear_cache_failed">Could not clear the torrent cache</string>
-    <string name="player_torrent_peer_info">%1$d seeds · %2$d peers</string>
+    <plurals name="player_torrent_peers">
+        <item quantity="one">%1$d peer</item>
+        <item quantity="other">%1$d peers</item>
+    </plurals>
+    <plurals name="player_torrent_seeds">
+        <item quantity="one">%1$d seed</item>
+        <item quantity="other">%1$d seeds</item>
+    </plurals>
     <string name="player_torrent_buffered_status">%1$s buffered · %2$s · %3$s</string>
     <string name="player_torrent_status">%1$s · %2$s</string>
-    <string name="player_torrent_stats">%1$d peers · %2$d seeds · %3$d%%</string>
     <string name="player_torrent_connecting_peers">Connecting to peers…</string>
     <string name="player_torrent_starting_engine">Starting P2P engine…</string>
     <string name="player_torrent_fetching_metadata">Fetching torrent metadata…</string>

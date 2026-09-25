@@ -109,6 +109,7 @@ import nuvio.composeapp.generated.resources.trakt_watch_progress_source_nuvio
 import nuvio.composeapp.generated.resources.trakt_watch_progress_source_trakt
 import nuvio.composeapp.generated.resources.trakt_watch_progress_subtitle
 import nuvio.composeapp.generated.resources.trakt_watch_progress_title
+import org.jetbrains.compose.resources.pluralStringResource
 import org.jetbrains.compose.resources.stringResource
 
 internal fun LazyListScope.trackingSettingsContent(
@@ -631,7 +632,7 @@ private fun continueWatchingDaysCapLabel(daysCap: Int): String {
     return if (normalized == TRAKT_CONTINUE_WATCHING_DAYS_CAP_ALL) {
         stringResource(Res.string.trakt_all_history)
     } else {
-        stringResource(Res.string.trakt_days_format, normalized)
+        pluralStringResource(Res.plurals.trakt_days_format, normalized, normalized)
     }
 }
 

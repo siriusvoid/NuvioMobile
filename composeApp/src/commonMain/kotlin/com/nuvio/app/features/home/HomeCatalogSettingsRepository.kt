@@ -14,7 +14,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import nuvio.composeapp.generated.resources.*
-import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.getPluralString
 
 data class HomeCatalogSettingsItem(
     val key: String,
@@ -632,7 +632,7 @@ internal fun buildCollectionDefinitions(collections: List<Collection>): List<Col
             key = "collection_${collection.id}",
             collectionId = collection.id,
             title = collection.title,
-            subtitle = runBlocking { getString(Res.string.collections_folder_count, collection.folders.size) },
+            subtitle = runBlocking { getPluralString(Res.plurals.collections_folder_count, collection.folders.size, collection.folders.size) },
             isPinnedToTop = collection.pinToTop,
         )
     }
