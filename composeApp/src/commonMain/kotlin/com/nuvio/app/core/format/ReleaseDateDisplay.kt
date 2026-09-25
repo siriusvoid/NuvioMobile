@@ -1,10 +1,11 @@
 package com.nuvio.app.core.format
 
-import com.nuvio.app.core.i18n.localizedMonthName
+import com.nuvio.app.core.i18n.localizedFullDate
+import com.nuvio.app.core.i18n.localizedMonthDay
 import com.nuvio.app.core.time.parseEpisodeReleaseLocalDate
 
 /**
- * Formats ISO calendar dates (yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss…) for UI as "2025 February 1".
+ * Formats ISO calendar dates (yyyy-MM-dd or yyyy-MM-ddTHH:mm:ss…) for UI, as "2025 February 1" in English.
  * Other strings (e.g. year-only "2024", human text from addons) are returned unchanged.
  */
 fun formatReleaseDateForDisplay(raw: String): String {
@@ -16,7 +17,7 @@ fun formatReleaseDateForDisplay(raw: String): String {
     val year = parts[0].toIntOrNull() ?: return raw
     val month = parts[1].toIntOrNull()?.takeIf { it in 1..12 } ?: return raw
     val day = parts[2].toIntOrNull()?.takeIf { it in 1..31 } ?: return raw
-    return "$year ${localizedMonthName(month)} $day"
+    return localizedFullDate(year, month, day)
 }
 
 fun formatReleaseDateWithoutYear(raw: String): String {
@@ -27,7 +28,7 @@ fun formatReleaseDateWithoutYear(raw: String): String {
     if (parts.size != 3) return raw
     val month = parts[1].toIntOrNull()?.takeIf { it in 1..12 } ?: return raw
     val day = parts[2].toIntOrNull()?.takeIf { it in 1..31 } ?: return raw
-    return "${localizedMonthName(month)} $day"
+    return localizedMonthDay(month, day)
 }
 
 /**

@@ -17,6 +17,9 @@ import nuvio.composeapp.generated.resources.compose_player_no_subtitle_lines_fou
 import nuvio.composeapp.generated.resources.compose_player_subtitle_lines_load_error
 import nuvio.composeapp.generated.resources.continue_watching_up_next
 import nuvio.composeapp.generated.resources.continue_watching_up_next_episode
+import nuvio.composeapp.generated.resources.date_format_full
+import nuvio.composeapp.generated.resources.date_format_month_day
+import nuvio.composeapp.generated.resources.date_format_short
 import nuvio.composeapp.generated.resources.date_month_april
 import nuvio.composeapp.generated.resources.date_month_august
 import nuvio.composeapp.generated.resources.date_month_december
@@ -145,6 +148,22 @@ fun localizedShortMonthName(month: Int): String =
         12 -> resourceString("Dec") { getString(Res.string.date_month_short_dec) }
         else -> month.toString()
     }
+
+// The language decides the order of day, month and year, and the month's form in a date.
+fun localizedFullDate(year: Int, month: Int, day: Int): String {
+    val monthName = localizedMonthName(month)
+    return resourceString("$year $monthName $day") { getString(Res.string.date_format_full, year, monthName, day) }
+}
+
+fun localizedMonthDay(month: Int, day: Int): String {
+    val monthName = localizedMonthName(month)
+    return resourceString("$monthName $day") { getString(Res.string.date_format_month_day, monthName, day) }
+}
+
+fun localizedShortDate(year: Int, month: Int, day: Int): String {
+    val monthName = localizedShortMonthName(month)
+    return resourceString("$monthName $day, $year") { getString(Res.string.date_format_short, monthName, day, year) }
+}
 
 fun localizedNoSubtitleLinesFound(): String =
     resourceString("No subtitle lines found") { getString(Res.string.compose_player_no_subtitle_lines_found) }

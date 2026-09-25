@@ -1945,6 +1945,9 @@
     <string name="date_month_short_oct">Oct</string>
     <string name="date_month_short_nov">Nov</string>
     <string name="date_month_short_dec">Dec</string>
+    <string name="date_format_full">%1$d %2$s %3$d</string>
+    <string name="date_format_month_day">%1$s %2$d</string>
+    <string name="date_format_short">%1$s %2$d, %3$d</string>
     <string name="details_browse_kind_company">Production Company</string>
     <string name="details_browse_kind_network">Network</string>
     <string name="details_browse_load_failed">Could not load %1$s</string>
