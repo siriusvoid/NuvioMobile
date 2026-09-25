@@ -1,14 +1,15 @@
 import BackgroundTasks
+import ComposeApp
 import Foundation
 import UIKit
 
 private let downloadsLiveStatusUpdatedNotification = Notification.Name("NuvioDownloadsLiveStatusUpdated")
 
 /// Shows running downloads in the system's own progress UI, as a continued
-/// processing task. The transfers run in the background URLSession and don't
-/// depend on it: the task keeps the app running so progress stays live and the
-/// queue moves on, and when it ends — expired, or stopped from that UI — the file
-/// in flight still finishes, just without the progress UI.
+/// processing task. The transfers don't depend on it: the task keeps the app
+/// running so progress stays live and the queue moves on at full speed, and when
+/// it ends — expired, or stopped from that UI — the file in flight moves to the
+/// background URLSession and still finishes, just without the progress UI.
 final class DownloadsBackgroundTaskManager {
     static let shared = DownloadsBackgroundTaskManager()
 
@@ -120,6 +121,7 @@ private final class ContinuedDownloadTask {
         guard !isFinished else { return }
         isFinished = true
         if let task {
+            DownloadsPlatformDownloader_iosKt.setDownloadsProgressUiActive(active: false)
             task.setTaskCompleted(success: success)
         } else {
             BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: identifier)
@@ -128,6 +130,7 @@ private final class ContinuedDownloadTask {
 
     private func attach(_ task: BGContinuedProcessingTask) {
         self.task = task
+        DownloadsPlatformDownloader_iosKt.setDownloadsProgressUiActive(active: true)
         // Called when the system ends it or the user stops it from its UI. The two
         // can't be told apart, so downloads carry on either way.
         task.expirationHandler = { [weak self] in
