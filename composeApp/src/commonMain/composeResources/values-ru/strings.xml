@@ -675,6 +675,7 @@
     <string name="settings_appearance_app_icon_change_failed">Значок не удалось изменить. Пожалуйста, попробуйте еще раз.</string>
     <string name="settings_appearance_app_icon_copper">Медь</string>
     <string name="settings_appearance_app_icon_emerald">Изумрудный</string>
+    <string name="settings_appearance_app_icon_classic">Классический</string>
     <string name="settings_appearance_app_icon_graphite">Графит</string>
     <string name="settings_appearance_app_icon_original">Оригинал</string>
     <string name="settings_appearance_app_icon_rose_gold">Розовое золото</string>
@@ -1244,6 +1245,9 @@
     <string name="settings_tracking_services">Аккаунты</string>
     <string name="settings_tracking_approval_redirect">После одобрения вы будете автоматически перенаправлены обратно.</string>
     <string name="settings_tracking_connect_first">Сначала подключите %1$s</string>
+    <string name="settings_tracking_scrobbling">Скробблинг</string>
+    <string name="settings_tracking_scrobbling_description">Отправлять воспроизведение и отметки о просмотре в подключённые сервисы отслеживания</string>
+    <string name="settings_tracking_scrobbling_connect_first">Сначала подключите Trakt или Simkl</string>
     <string name="settings_tracking_disconnect_title">Отключить %1$s?</string>
     <string name="settings_tracking_disconnect_description">Это удалит соединение с Nuvio. Ваши данные на %1$s остаются нетронутыми, а недоступные библиотеки или источники прогресса временно возвращаются к Nuvio.</string>
     <string name="settings_trakt_disconnect_description">Это приведет к отключению вашей учетной записи Trakt от Nuvio.</string>
@@ -1279,6 +1283,15 @@
     <string name="settings_simkl_sign_in_description">Подключите Simkl для синхронизации списков, истории просмотров, прогресса воспроизведения и скробблов.</string>
     <string name="settings_simkl_missing_credentials">Отсутствует SIMKL_CLIENT_ID</string>
     <string name="settings_simkl_visit">Посетите Simkl</string>
+    <string name="settings_tracking_connect_with_code">Подключить по коду</string>
+    <string name="settings_tracking_device_code_title">Вход по коду</string>
+    <string name="settings_tracking_device_code_instruction">Откройте %1$s на любом устройстве и введите этот код.</string>
+    <string name="settings_tracking_device_code_requesting">Получение кода…</string>
+    <string name="settings_tracking_device_code_copy">Скопировать код</string>
+    <string name="settings_tracking_device_code_copied">Код скопирован</string>
+    <string name="settings_tracking_device_code_open_page">Открыть страницу</string>
+    <string name="settings_tracking_device_code_waiting">Ожидание подтверждения…</string>
+    <string name="settings_tracking_device_code_cancel">Отмена</string>
     <string name="settings_simkl_invalid_callback">Simkl не принял обратный вызов для входа. Пожалуйста, попробуйте еще раз.</string>
     <string name="settings_simkl_authorization_expired">Срок действия кода Simkl истек. Начни заново.</string>
     <string name="settings_simkl_sign_in_failed">Не удалось завершить вход в систему с помощью Simkl. Повторите попытку.</string>
@@ -1695,6 +1708,10 @@
     <string name="trakt_authorization_denied">Авторизация отклонена</string>
     <string name="trakt_authorization_expired_reconnect">Ваша авторизация Trakt больше не действительна. Повторно подключите свою учетную запись Trakt.</string>
     <string name="trakt_complete_sign_in_browser">Завершите вход Trakt в браузере.</string>
+    <string name="trakt_device_request_code">Получение кода активации Trakt…</string>
+    <string name="trakt_device_start_failed">Не удалось запустить авторизацию Trakt.</string>
+    <string name="trakt_device_code_expired">Код активации Trakt истёк. Попробуйте подключиться ещё раз.</string>
+    <string name="trakt_device_activation_instruction">Откройте %1$s и введите код %2$s. Не закрывайте Nuvio, пока Trakt не подтвердит авторизацию.</string>
     <string name="trakt_connected">Подключен к Trakt.</string>
     <string name="trakt_disconnected">Отключено от Trakt</string>
     <string name="trakt_invalid_callback">Неверный обратный вызов Trakt</string>
