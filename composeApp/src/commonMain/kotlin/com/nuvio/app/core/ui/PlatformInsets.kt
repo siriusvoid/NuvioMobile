@@ -21,6 +21,9 @@ internal expect fun nuvioBottomNavigationBarInsets(): WindowInsets
 @Composable
 internal expect fun platformPhysicalTopInset(): Dp
 
+@Composable
+internal expect fun ResizeForKeyboard()
+
 /**
  * The top inset this view reports moves under us. The system tab bar minimizes while a push is in
  * flight and expands again a beat after the pop, and a native bar a screen is pushed under does the
@@ -41,6 +44,8 @@ internal fun nuvioStableTopInset(): Dp {
 
 internal val LocalNuvioBottomNavigationOverlayPadding = staticCompositionLocalOf { 0.dp }
 
+internal val LocalBottomInsetsConsumed = staticCompositionLocalOf { false }
+
 /** True only inside the tab host, where the system tab bar is actually on screen. */
 internal val LocalNuvioSystemTabBarActive = staticCompositionLocalOf { false }
 
@@ -55,6 +60,7 @@ val LocalNuvioNavBarScrollState = staticCompositionLocalOf<NuvioNavBarScrollStat
 
 @Composable
 internal fun nuvioSafeBottomPadding(extra: Dp = 0.dp): Dp {
+	if (LocalBottomInsetsConsumed.current) return extra
 	val navigationBarBottom = nuvioBottomNavigationBarInsets()
 		.asPaddingValues()
 		.calculateBottomPadding()

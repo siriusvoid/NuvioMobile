@@ -65,6 +65,9 @@ fun DownloadsScreen(
         DownloadsRepository.ensureLoaded()
         DownloadsRepository.uiState
     }.collectAsStateWithLifecycle()
+    LaunchedEffect(uiState.completedItems.size) {
+        DownloadsRepository.markCompletedSeen()
+    }
 
     // Downloads deleted in the Files app meanwhile drop out of the list.
     LaunchedEffect(Unit) { DownloadsRepository.pruneMissingFiles() }
@@ -160,6 +163,7 @@ fun DownloadsScreen(
             title = stringResource(Res.string.action_delete_confirm_title),
             message = stringResource(Res.string.action_delete_confirm_message),
             isVisible = true,
+            destructive = true,
             confirmText = stringResource(Res.string.action_yes),
             dismissText = stringResource(Res.string.action_no),
             onConfirm = {
